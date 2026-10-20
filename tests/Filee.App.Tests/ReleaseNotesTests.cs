@@ -101,7 +101,7 @@ public class ReleaseNotesTests
                         Release("v9.9.12", "<!-- update\nlevel: optional\n-->", draft: true),
                         Release("v9.9.11", "<!-- update\nlevel: optional\nko: 새 기능\n-->"),
                         Release("v9.9.10", "<!-- update\nlevel: required\nko: 중요한 수정\n-->"),
-                        Release("v1.0.0", "old"),
+                        Release("v0.0.1", "old"), // Mandarina: older than the real version (0.1.0), not than Filee's 1.x
                     }
                     : null;
             return Task.FromResult(answer is null
