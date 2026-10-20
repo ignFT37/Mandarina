@@ -54,7 +54,7 @@ Solo Windows 10/11, y joven: habrá asperezas. Las versiones compiladas no está
 
 Descarga **`Mandarina-<versión>-win-x64-setup.exe`** (instalador, solo para ti, sin permisos de administrador) o
 **`Mandarina-<versión>-win-x64.zip`** (portátil: descomprímelo donde quieras y abre `Mandarina.exe`) de la
-[última versión](https://github.com/ignFT37/Mandarina/releases/latest). Windows 10/11 de 64 bits; no hace falta instalar nada más. El instalador crea el acceso directo en
+[última versión](https://github.com/ignFT37/Mandarina/releases). Windows 10/11 de 64 bits; no hace falta instalar nada más. El instalador crea el acceso directo en
 Inicio y, si dejas la casilla marcada, añade el comando `mandarina` al PATH.
 
 Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión:

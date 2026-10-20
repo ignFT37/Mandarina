@@ -89,5 +89,6 @@ if (-not $NoInstaller) {
 $sums = foreach ($file in @($zip, $installer) | Where-Object { $_ }) {
     '{0} *{1}' -f (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $file -Leaf)
 }
-Set-Content -Path (Join-Path $Output 'SHA256SUMS.txt') -Value $sums -Encoding ascii
+# Unix line endings, so "sha256sum -c SHA256SUMS.txt" works on Linux and WSL too.
+[IO.File]::WriteAllText((Join-Path $Output 'SHA256SUMS.txt'), (($sums -join "`n") + "`n"), [Text.Encoding]::ASCII)
 $sums | ForEach-Object { Write-Host $_ }
