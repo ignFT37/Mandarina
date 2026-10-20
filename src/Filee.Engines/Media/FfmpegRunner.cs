@@ -102,10 +102,53 @@ internal static class FfmpegRunner
 
         // Make sure the asynchronous readers have delivered the last lines.
         process.WaitForExit();
+        AppLocalRuntime.ThrowIfMissing(ffmpeg, process.ExitCode);
         string stderr;
         lock (errors)
             stderr = string.Join(Environment.NewLine, errors);
         return new ProcessResult(process.ExitCode, "", stderr);
+    }
+
+    /// <summary>
+    /// Runs a short query (<c>ffmpeg -version</c>, <c>-encoders</c>) synchronously. Both streams are read in the
+    /// background, so the time limit holds even when the program hangs with its output open (reading it to the end
+    /// first would wait for the hang).
+    /// </summary>
+    /// <exception cref="TimeoutException">The program did not exit within <paramref name="timeout"/>; it was killed.</exception>
+    /// <exception cref="InvalidOperationException">The program could not be started.</exception>
+    internal static ProcessResult RunBriefly(string executable, IReadOnlyList<string> arguments, TimeSpan timeout)
+    {
+        var psi = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        foreach (var argument in arguments)
+            psi.ArgumentList.Add(argument);
+
+        using var process = new Process { StartInfo = psi };
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        process.OutputDataReceived += (_, e) => { if (e.Data is not null) lock (stdout) stdout.Append(e.Data).Append('\n'); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) lock (stderr) stderr.Append(e.Data).Append('\n'); };
+        if (!process.Start())
+            throw new InvalidOperationException($"Could not start {executable}.");
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        if (!process.WaitForExit(timeout))
+        {
+            Kill(process);
+            throw new TimeoutException($"{Path.GetFileName(executable)} did not finish within {timeout.TotalSeconds:0} s.");
+        }
+        // Make sure the asynchronous readers have delivered the last lines.
+        process.WaitForExit();
+        lock (stdout)
+            lock (stderr)
+                return new ProcessResult(process.ExitCode, stdout.ToString(), stderr.ToString());
     }
 
     /// <summary>
@@ -149,12 +192,20 @@ internal static class FfmpegRunner
         return line;
     }
 
+    /// <summary>How long a killed FFmpeg may take to exit (and let go of its output) before the caller moves on.</summary>
+    private static readonly TimeSpan ExitAfterKill = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Kills FFmpeg and waits until it has exited: Kill only asks Windows to end it, and a process that still runs
+    /// holds its output open, so the half-written file or folder of frames could not be deleted yet.
+    /// </summary>
     private static void Kill(Process process)
     {
         try
         {
             if (!process.HasExited)
                 process.Kill(entireProcessTree: true);
+            process.WaitForExit(ExitAfterKill);
         }
         catch (InvalidOperationException) { }
         catch (System.ComponentModel.Win32Exception) { }

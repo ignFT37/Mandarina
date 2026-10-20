@@ -141,18 +141,23 @@ internal static class MediaEncoding
     /// <param name="workDirectory">Scratch folder (the GIF palette goes there).</param>
     /// <param name="cover">The source's cover for targets FFmpeg can't put a picture stream into (<see cref="CoverArt"/>).</param>
     /// <param name="encoders">The encoders the FFmpeg in use has (<c>ffmpeg -encoders</c>); null assumes the pinned build's.</param>
+    /// <param name="hardware">
+    /// The hardware encoder that passed its probe for <see cref="HardwareCodec"/> of this file; null encodes with x264 /
+    /// x265 (also the retry after a hardware encode failed).
+    /// </param>
+    /// <param name="animationSpeed">Playback speed of an animated GIF or APNG (ImageOptions.PlaybackSpeed); 1 keeps the video's.</param>
     /// <exception cref="InvalidOperationException">The file lacks the stream the target needs (e.g. no audio track).</exception>
     public static IReadOnlyList<FfmpegPass> Plan(string input, string output, string target, MediaOptions options, MediaInfo info, string workDirectory,
-        CoverExtras? cover = null, IReadOnlySet<string>? encoders = null)
+        CoverExtras? cover = null, IReadOnlySet<string>? encoders = null, HardwareEncoder? hardware = null, double animationSpeed = 1)
     {
         if (target == "gif")
-            return AnimatedGif(input, output, options, info, workDirectory);
+            return AnimatedGif(input, output, options, info, workDirectory, animationSpeed);
         if (target == "apng")
-            return [new FfmpegPass(AnimatedPng(input, output, options, info), 1)];
+            return [new FfmpegPass(AnimatedPng(input, output, options, info, animationSpeed), 1)];
         if (target == "png")
             return [new FfmpegPass(PosterFrame(input, output, info), 1)];
         if (VideoTargets.TryGetValue(target, out var video))
-            return [new FfmpegPass(Video(input, output, target, video, options, info, encoders), 1)];
+            return [new FfmpegPass(Video(input, output, target, video, options, info, encoders, hardware), 1)];
         if (AudioTargets.TryGetValue(target, out var audio))
             return [new FfmpegPass(Audio(input, output, target, audio, options, info, cover), 1)];
         if (SubtitleTargets.ContainsKey(target))
@@ -160,10 +165,64 @@ internal static class MediaEncoding
         throw new NotSupportedException($"FFmpeg cannot write '{target}'.");
     }
 
+    /// <summary>
+    /// Maps preset image quality (1..100, 100 best) to FFmpeg's mjpeg -q:v parameter (1..31, 1 best, 2..3 visually lossless).
+    /// </summary>
+    public static int QualityToQv(int quality)
+    {
+        var clamped = Math.Clamp(quality, 1, 100);
+        return Math.Clamp((int)Math.Round(2.0 + (100 - clamped) * 29.0 / 99.0), 1, 31);
+    }
+
+    /// <summary>
+    /// Every frame (or every <paramref name="frameInterval"/>th) of the first video stream as numbered pictures in
+    /// <paramref name="outputPattern"/> (an image2 pattern such as <c>frame_%06d.png</c>), for focus stacking and
+    /// picking a shot.
+    /// </summary>
+    /// <remarks>
+    /// Each decoded frame is written once. The image2 muxer would otherwise pace frames to a constant rate and
+    /// duplicate (or drop) frames of a variable frame rate video (phones), so frames pass through with their own
+    /// timestamps; with an interval the select filter leaves gaps, which <c>vfr</c> keeps as they are.
+    /// </remarks>
+    public static List<string> FrameSequence(
+        string input,
+        string outputPattern,
+        string imageExt,
+        VideoStreamInfo? video = null,
+        int quality = 90,
+        int frameInterval = 1)
+    {
+        var select = frameInterval > 1 ? $"select='not(mod(n\\,{frameInterval}))'" : "null";
+        List<string> args =
+        [
+            .. Common, "-i", input, "-map", "0:V:0", "-vf", (video is null ? "" : SquarePixels(video)) + select,
+            "-fps_mode", frameInterval > 1 ? "vfr" : "passthrough",
+        ];
+
+        if (imageExt is "jpg" or "jpeg")
+            args.AddRange(["-c:v", "mjpeg", "-q:v", QualityToQv(quality).ToString(CultureInfo.InvariantCulture)]);
+        else
+            args.AddRange(["-c:v", "png"]);
+
+        args.AddRange(["-f", "image2", "-progress", "pipe:1", outputPattern]);
+        return args;
+    }
+
     // ───────────────────────── Video ─────────────────────────
 
+    /// <summary>
+    /// The codec a hardware encoder would have to write for this file ("h264" or "hevc"), or null when the preset does
+    /// not ask for hardware encoding, the target is written with another codec (VP9, AV1, MPEG-2, …), or the video is
+    /// copied anyway.
+    /// </summary>
+    internal static string? HardwareCodec(string target, MediaOptions options, MediaInfo info) =>
+        options.HardwareEncoding && info.Video is { } video && VideoTargets.ContainsKey(target)
+        && MediaCodecs.TakesHardwareEncoding(target, options.VideoCodec) && !CanCopyVideo(target, video, options)
+            ? MediaCodecs.Effective(target, options.VideoCodec) == Core.Presets.VideoCodec.Hevc ? "hevc" : "h264"
+            : null;
+
     private static List<string> Video(string input, string output, string target, MediaTarget spec, MediaOptions options, MediaInfo info,
-        IReadOnlySet<string>? encoders)
+        IReadOnlySet<string>? encoders, HardwareEncoder? hardware)
     {
         var video = info.Video ?? throw new InvalidOperationException("The file has no video stream.");
         // An input without sound is fine: the output simply has no audio track.
@@ -179,6 +238,13 @@ internal static class MediaEncoding
             // Apple plays HEVC in MP4/MOV only under the "hvc1" tag (FFmpeg keeps "hev1" from some sources).
             if (video.Codec == "hevc" && target is "mp4" or "m4v" or "mov")
                 args.AddRange(["-tag:v", "hvc1"]);
+        }
+        else if (hardware is not null && HardwareCodec(target, options, info) == hardware.Codec)
+        {
+            // VA-API's device is a global option, so it goes before the input.
+            args.InsertRange(Common.Length, HardwareVideo.InputArguments(hardware));
+            args.AddRange(["-vf", ScaleFilter(options.MaxHeight) + HardwareVideo.FilterSuffix(hardware, HardwareVideo.TenBit(hardware.Codec, video))]);
+            args.AddRange(HardwareVideo.CodecArguments(hardware, target, options.Quality, video, options.MaxHeight));
         }
         else
         {
@@ -371,8 +437,14 @@ internal static class MediaEncoding
     internal static string[] HighBitDepthArguments(VideoStreamInfo video)
     {
         var tenBit = video.IsHighBitDepth || video.IsHdr;
-        List<string> args = ["-pix_fmt", tenBit ? "yuv420p10le" : "yuv420p"];
-        if (tenBit && video.Color is { } color)
+        return ["-pix_fmt", tenBit ? "yuv420p10le" : "yuv420p", .. tenBit ? ColorArguments(video) : []];
+    }
+
+    /// <summary>The source's colour tags (primaries, transfer, matrix), for 10-bit and HDR encodes.</summary>
+    internal static List<string> ColorArguments(VideoStreamInfo video)
+    {
+        List<string> args = [];
+        if (video.Color is { } color)
         {
             if (color.Primaries is { } primaries)
                 args.AddRange(["-color_primaries", primaries]);
@@ -381,7 +453,7 @@ internal static class MediaEncoding
             if (color.Matrix is { } matrix)
                 args.AddRange(["-colorspace", matrix]);
         }
-        return [.. args];
+        return args;
     }
 
     /// <summary><c>-r</c> for a rate, nothing when the source rate is unknown (FFmpeg then keeps its own guess).</summary>
@@ -648,11 +720,11 @@ internal static class MediaEncoding
     /// the palette in the same run would keep every frame in memory until the end. Frame rate and width are limited
     /// by the quality setting because GIF stores every frame uncompressed-ish and grows fast.
     /// </summary>
-    private static List<FfmpegPass> AnimatedGif(string input, string output, MediaOptions options, MediaInfo info, string workDirectory)
+    private static List<FfmpegPass> AnimatedGif(string input, string output, MediaOptions options, MediaInfo info, string workDirectory, double speed)
     {
         var video = info.Video ?? throw new InvalidOperationException("The file has no video stream.");
         var quality = options.Quality;
-        var chain = GifFrames(video, options.MaxHeight, fps: Choose(quality, 15, 12, 10), maxWidth: Choose(quality, 640, 480, 320));
+        var chain = GifFrames(video, options.MaxHeight, fps: Choose(quality, 15, 12, 10), maxWidth: Choose(quality, 640, 480, 320), speed);
         var palette = Path.Combine(workDirectory, $"palette-{Guid.NewGuid():N}.png");
         var colors = Choose(quality, 256, 256, 128);
         // Error diffusion looks best; ordered (Bayer) dithering compresses much better because it does not flicker.
@@ -680,11 +752,11 @@ internal static class MediaEncoding
     /// Animated PNG with FFmpeg's APNG encoder and muxer: full colour (24-bit RGB, no palette pass), looping, with the
     /// frame rate and width limits of GIF, since every frame is stored losslessly.
     /// </summary>
-    private static List<string> AnimatedPng(string input, string output, MediaOptions options, MediaInfo info)
+    private static List<string> AnimatedPng(string input, string output, MediaOptions options, MediaInfo info, double speed)
     {
         var video = info.Video ?? throw new InvalidOperationException("The file has no video stream.");
         var quality = options.Quality;
-        var chain = GifFrames(video, options.MaxHeight, fps: Choose(quality, 15, 12, 10), maxWidth: Choose(quality, 640, 480, 320));
+        var chain = GifFrames(video, options.MaxHeight, fps: Choose(quality, 15, 12, 10), maxWidth: Choose(quality, 640, 480, 320), speed);
         return
         [
             .. Common, "-i", input, "-map", "0:V:0", "-vf", chain, "-an",
@@ -692,11 +764,18 @@ internal static class MediaEncoding
         ];
     }
 
-    /// <summary>Frame rate, square pixels and size of the GIF frames (never upscaled).</summary>
-    private static string GifFrames(VideoStreamInfo video, int maxHeight, int fps, int maxWidth)
+    /// <summary>
+    /// Playback speed, frame rate, square pixels and size of the GIF frames (never upscaled). The speed changes the
+    /// timestamps before the frame rate is taken, so a faster clip keeps the frame rate by leaving frames out, and a
+    /// slower one repeats frames where the video has too few.
+    /// </summary>
+    private static string GifFrames(VideoStreamInfo video, int maxHeight, int fps, int maxWidth, double speed)
     {
         var height = maxHeight > 0 ? $"'min(ih,{Math.Max(16, maxHeight)})'" : "ih";
-        return $"fps={fps},{SquarePixels(video)}scale=w='min(iw,{maxWidth})':h={height}:force_original_aspect_ratio=decrease:flags=lanczos";
+        var timing = double.IsFinite(speed) && speed is > 0 and not 1
+            ? $"setpts=PTS/{speed.ToString("0.###", CultureInfo.InvariantCulture)},"
+            : "";
+        return $"{timing}fps={fps},{SquarePixels(video)}scale=w='min(iw,{maxWidth})':h={height}:force_original_aspect_ratio=decrease:flags=lanczos";
     }
 
     /// <summary>Images have no pixel aspect ratio: anamorphic video (DV, DVD) is stretched to square pixels first.</summary>

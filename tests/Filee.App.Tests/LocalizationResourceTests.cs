@@ -20,12 +20,17 @@ public class LocalizationResourceTests
         TestServices.EnsureInitialized("en");
         var text = new TextBlock();
         text.Bind(TextBlock.TextProperty, text.GetResourceObservable("home.title"));
-        var window = new Window { Content = text };
+        var toggle = new ToggleSwitch();
+        var window = new Window { Content = new StackPanel { Children = { text, toggle } } };
         window.Show();
         Assert.Equal("Home", text.Text);
 
         TestServices.EnsureInitialized("ko");
         Assert.Equal("홈", text.Text);
+        TestServices.EnsureInitialized("ja");
+        Assert.Equal("ホーム", text.Text);
+        Assert.Equal("オン", toggle.OnContent);
+        Assert.Equal("オフ", toggle.OffContent);
         window.Close();
     }
 }

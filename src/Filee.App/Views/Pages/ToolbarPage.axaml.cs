@@ -4,8 +4,10 @@
 // Targets: a donut slice (insert at / move to that position), the empty ring or the hole (append),
 //          or the palette box (remove a slice).
 // A floating "ghost" chip follows the pointer, and the donut opens a gap where the drop would land, with a
-// translucent slice of the dragged preset in it (DonutMenu.SetDropPreview).
+// translucent slice of the dragged preset in it (DonutMenu.SetDropPreview). The Front / Back switch shows the other
+// face of the profile, and the donut turns in to it as the open donut does on Tab.
 
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -27,6 +29,7 @@ public partial class ToolbarPage : UserControl
     }
 
     private DragState? _drag;
+    private ToolbarPageViewModel? _subscribed;
 
     public ToolbarPage()
     {
@@ -51,6 +54,24 @@ public partial class ToolbarPage : UserControl
             if (Vm is not null)
                 await Vm.EditAsync(index);
         };
+        DataContextChanged += (_, _) =>
+        {
+            if (_subscribed is not null)
+                _subscribed.PropertyChanged -= OnViewModelChanged;
+            _subscribed = Vm;
+            if (_subscribed is not null)
+                _subscribed.PropertyChanged += OnViewModelChanged;
+        };
+    }
+
+    /// <summary>The switch showed the other face (its slices are in already): the donut turns in to it.</summary>
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ToolbarPageViewModel.EditingBack))
+        {
+            EndDrag();
+            Donut.PlayFlipIn();
+        }
     }
 
     private ToolbarPageViewModel? Vm => DataContext as ToolbarPageViewModel;

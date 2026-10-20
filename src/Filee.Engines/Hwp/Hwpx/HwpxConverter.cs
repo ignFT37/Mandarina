@@ -4,8 +4,9 @@
 //    text boxes and formatting.
 //  * TXT needs no reader: one paragraph per line. Markdown is parsed with Markdig (MarkdownReader).
 //  * XLSX / XLSM / XLTX and CSV are read directly (Office/Sheets); every sheet becomes a table (SheetDocument).
-//  * PPTX / PPTM / POTX / PPSX are read directly (Pptx/PptxReader): one page per slide.
-//  * PDF is read with PdfPig (Pdf/PdfDocumentReader): text in reading order, headings, pictures, scans as images.
+//  * PPTX / PPTM / POTX / POTM / PPSX are read directly (Pptx/PptxReader): one page per slide.
+//  * PDF is read with PdfPig (Pdf/PdfDocumentReader): text in reading order, headings, ruled tables, pictures, scans
+//    as images.
 //  * HTML (HtmlReader, AngleSharp), EPUB, MOBI / AZW3, FB2, HTMLZ and TXTZ (Ebooks) and HWPX (HwpxReader) are read
 //    directly.
 //  * ODT, RTF, reStructuredText and LaTeX are parsed by Pandoc (optional engine) into its JSON AST.

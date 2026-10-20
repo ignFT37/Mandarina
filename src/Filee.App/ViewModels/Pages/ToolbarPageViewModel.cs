@@ -1,4 +1,5 @@
-// Donut toolbar editor: 1) choose a profile  2) arrange its presets on a live donut by drag & drop.
+// Donut toolbar editor: 1) choose a profile  2) arrange its presets on a live donut by drag & drop, on the front face
+// or on the back (Tab flips the open donut to it), picked with the Front / Back switch above the donut.
 // The drag gestures themselves live in the view (ToolbarPage.axaml.cs); this class only mutates the model.
 // A profile is either normal (extension chips, ExtensionTagsViewModel) or for mixed selections (check list,
 // MixedExtensionsViewModel). Normal profiles are kept before the mixed ones, so a new mixed profile never takes over
@@ -64,7 +65,18 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
         _loading = false;
 
         SelectedProfile = Profiles.FirstOrDefault();
+
+        // How the open donut flips, as set in Settings → Shortcuts: "Flip the open donut: Tab / mouse wheel".
+        var ways = new List<string>();
+        if (store.Settings.Donut.EffectiveFlipKey(store.Settings.Triggers) is { } key)
+            ways.Add(KeyNames.Display(key));
+        if (store.Settings.Donut.FlipWithWheel)
+            ways.Add(loc["toolbar.face_hint_wheel"]);
+        FaceHint = ways.Count == 0 ? loc["toolbar.face_hint_off"] : loc.Format("toolbar.face_hint", string.Join(" / ", ways));
     }
+
+    /// <summary>Under the Front / Back switch: what flips the open donut (or that nothing does).</summary>
+    public string FaceHint { get; }
 
     public ObservableCollection<ProfileItemViewModel> Profiles { get; } = [];
     public ObservableCollection<PaletteChip> Palette { get; } = [];
@@ -94,8 +106,27 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
 
     [ObservableProperty] private bool _canDelete;
 
+    /// <summary>The selected profile is a built-in donut, which "Reset to default" can put back (a new one can't).</summary>
+    [ObservableProperty] private bool _canReset;
+
     /// <summary>Extension chips of a normal profile (null for a mixed one).</summary>
     [ObservableProperty] private ExtensionTagsViewModel? _extensionTags;
+
+    /// <summary>The donut shows and edits the back face of the profile (the Front / Back switch).</summary>
+    [ObservableProperty] private bool _editingBack;
+
+    /// <summary>The front face is edited: the other half of the switch.</summary>
+    public bool EditingFront
+    {
+        get => !EditingBack;
+        set => EditingBack = !value;
+    }
+
+    /// <summary>Slices on the front face, for the switch.</summary>
+    public int FrontCount => Profile?.PresetIds.Count ?? 0;
+
+    /// <summary>Slices on the back face, for the switch.</summary>
+    public int BackCount => Profile?.BackPresetIds?.Count ?? 0;
 
     /// <summary>Check list of a mixed-selection profile (null for a normal one).</summary>
     [ObservableProperty] private MixedExtensionsViewModel? _mixedExtensions;
@@ -104,6 +135,17 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
     [ObservableProperty] private double _sliceOpacity;
 
     private ToolbarProfile? Profile => SelectedProfile?.Profile;
+
+    /// <summary>The preset ids of the face being edited (null without a profile).</summary>
+    private List<string>? Slices => Profile is not { } profile ? null
+        : EditingBack ? (profile.BackPresetIds ??= []) : profile.PresetIds;
+
+    partial void OnEditingBackChanged(bool value)
+    {
+        OnPropertyChanged(nameof(EditingFront));
+        Message = null;
+        Rebuild();
+    }
 
     partial void OnSelectedProfileChanged(ProfileItemViewModel? value)
     {
@@ -176,6 +218,7 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
         _loading = false;
         CanChangeMixed = profile is not null && !(profile.IsFallback && mixedCount <= 1);
         CanDelete = CanChangeMixed;
+        CanReset = profile is not null && _store.CanResetProfile(profile);
         ExtensionTags = profile is { IsFallback: false } ? new ExtensionTagsViewModel(profile, _store.Profiles, _loc, _store.SaveLibrary) : null;
         MixedExtensions = profile is { IsFallback: true } ? new MixedExtensionsViewModel(profile, _store.Profiles, _loc, _store.SaveLibrary) : null;
     }
@@ -196,48 +239,52 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
 
     // ───────── Editing operations called by the view's drag & drop ─────────
 
-    public int SliceCount => Profile?.PresetIds.Count ?? 0;
+    /// <summary>Slices on the face being edited.</summary>
+    public int SliceCount => Slices?.Count ?? 0;
 
-    /// <summary>Adds a palette preset at <paramref name="index"/> (clamped). Returns false when the donut is full.</summary>
+    /// <summary>
+    /// Adds a palette preset to the face being edited at <paramref name="index"/> (clamped). Returns false when that
+    /// face is full.
+    /// </summary>
     public bool Insert(string presetId, int index)
     {
-        if (Profile is null || Profile.PresetIds.Contains(presetId))
+        if (Slices is not { } slices || slices.Contains(presetId))
             return false;
-        if (Profile.PresetIds.Count >= ToolbarProfile.MaxSlices)
+        if (slices.Count >= ToolbarProfile.MaxSlices)
         {
             Message = _loc.Format("toolbar.max_reached", ToolbarProfile.MaxSlices);
             return false;
         }
-        Profile.PresetIds.Insert(Math.Clamp(index, 0, Profile.PresetIds.Count), presetId);
+        slices.Insert(Math.Clamp(index, 0, slices.Count), presetId);
         Commit();
         return true;
     }
 
     public void RemoveAt(int index)
     {
-        if (Profile is null || index < 0 || index >= Profile.PresetIds.Count)
+        if (Slices is not { } slices || index < 0 || index >= slices.Count)
             return;
-        Profile.PresetIds.RemoveAt(index);
+        slices.RemoveAt(index);
         Commit();
     }
 
     /// <summary>Moves a slice onto another slice's position.</summary>
     public void Move(int from, int to)
     {
-        if (Profile is null || from == to || from < 0 || from >= Profile.PresetIds.Count)
+        if (Slices is not { } slices || from == to || from < 0 || from >= slices.Count)
             return;
-        var id = Profile.PresetIds[from];
-        Profile.PresetIds.RemoveAt(from);
-        Profile.PresetIds.Insert(Math.Clamp(to, 0, Profile.PresetIds.Count), id);
+        var id = slices[from];
+        slices.RemoveAt(from);
+        slices.Insert(Math.Clamp(to, 0, slices.Count), id);
         Commit();
     }
 
     /// <summary>Opens the preset popup for the slice at <paramref name="index"/>.</summary>
     public async Task EditAsync(int index)
     {
-        if (Profile is null || index < 0 || index >= Profile.PresetIds.Count)
+        if (Slices is not { } slices || index < 0 || index >= slices.Count)
             return;
-        var preset = _store.FindPreset(Profile.PresetIds[index]);
+        var preset = _store.FindPreset(slices[index]);
         if (preset is not null && await _windows.EditPresetAsync(preset, _windows.Main))
             Commit();
     }
@@ -278,15 +325,15 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
         if (!await _windows.EditPresetAsync(preset, _windows.Main))
             return;
         _store.Presets.Add(preset);
-        if (Profile is not null && Profile.PresetIds.Count < ToolbarProfile.MaxSlices)
-            Profile.PresetIds.Add(preset.Id);
+        if (Slices is { Count: < ToolbarProfile.MaxSlices } slices)
+            slices.Add(preset.Id);
         Commit();
     }
 
     [RelayCommand]
     private void AddProfile()
     {
-        var profile = new ToolbarProfile { Name = _loc["toolbar.profile_new"], PresetIds = ["to-pdf", "to-png"] };
+        var profile = new ToolbarProfile { Name = _loc["toolbar.profile_new"], PresetIds = ["to-pdf", "to-png"], BackPresetIds = [] };
         // Before the mixed-selection profiles (normal ones come first; see Reposition).
         var index = _store.Profiles.FindIndex(p => p.IsFallback);
         index = index < 0 ? _store.Profiles.Count : index;
@@ -310,6 +357,48 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
         SelectedProfile = Profiles.FirstOrDefault();
     }
 
+    [RelayCommand]
+    private async Task ResetProfile()
+    {
+        if (SelectedProfile is not { } item || !CanReset || _windows.Main is null)
+            return;
+        if (!await _windows.ConfirmAsync(_windows.Main, _loc.Format("toolbar.reset_profile_confirm", item.Name), destructive: true))
+            return;
+        Reset(item);
+    }
+
+    /// <summary>Puts a built-in profile back to its defaults (see <see cref="UserDataStore.ResetProfile"/>).</summary>
+    internal void Reset(ProfileItemViewModel item)
+    {
+        if (!_store.ResetProfile(item.Profile))
+            return;
+        // A profile that changed kind moved to the border between the normal and the mixed ones.
+        var from = Profiles.IndexOf(item);
+        var to = _store.Profiles.IndexOf(item.Profile);
+        if (from != to)
+        {
+            _repositioning = true;
+            try
+            {
+                Profiles.Move(from, to);
+                SelectedProfile = item;
+            }
+            finally
+            {
+                _repositioning = false;
+            }
+        }
+        _loading = true;
+        ProfileName = _loc.DisplayName(item.Profile);
+        _loading = false;
+        Message = null;
+        // Every profile: the extension hints of the others change with this one's extensions.
+        foreach (var other in Profiles)
+            other.Refresh(_loc);
+        RebuildProfileEditor();
+        Rebuild();
+    }
+
     private void Commit()
     {
         _store.SaveLibrary();
@@ -319,11 +408,11 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
         Rebuild();
     }
 
-    /// <summary>Rebuilds the donut slices and the palette from the model.</summary>
+    /// <summary>Rebuilds the donut slices (of the face being edited) and the palette from the model.</summary>
     private void Rebuild()
     {
         var profile = Profile;
-        var used = profile?.PresetIds ?? [];
+        var used = Slices ?? [];
         DonutItems = used
             .Select(_store.FindPreset)
             .OfType<Preset>()
@@ -343,7 +432,11 @@ public sealed partial class ToolbarPageViewModel : ObservableObject
         }
 
         CenterTitle = profile is null ? "" : _loc.DisplayName(profile);
-        CenterSubtitle = $"{used.Count} / {ToolbarProfile.MaxSlices}";
+        CenterSubtitle = EditingBack
+            ? $"{_loc["toolbar.face_back"]} · {used.Count} / {ToolbarProfile.MaxSlices}"
+            : $"{used.Count} / {ToolbarProfile.MaxSlices}";
+        OnPropertyChanged(nameof(FrontCount));
+        OnPropertyChanged(nameof(BackCount));
     }
 
     private string? Caption(Preset p) =>

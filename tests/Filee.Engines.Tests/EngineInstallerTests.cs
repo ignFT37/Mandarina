@@ -19,6 +19,14 @@ public sealed class EngineInstallerTests : IDisposable
         try { Directory.Delete(_root, true); } catch (IOException) { }
     }
 
+    [Fact]
+    public void A_separate_data_folder_keeps_its_own_engines()
+    {
+        Assert.Equal(Path.Combine(_root, "engines"), EngineEnvironment.DefaultDownloadRoot(_root));
+        Assert.Equal(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Filee", "engines"),
+            EngineEnvironment.DefaultDownloadRoot(null));
+    }
+
     /// <summary>Serves byte arrays by URL; a string value is a redirect target.</summary>
     private sealed class FakeServer(Dictionary<string, object> content) : HttpMessageHandler
     {

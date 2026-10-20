@@ -51,6 +51,21 @@ public class ToastWindowTests
         }
     }
 
+    [AvaloniaFact]
+    public void A_note_on_a_converted_file_is_shown_under_the_card()
+    {
+        TestServices.EnsureInitialized("en");
+        var conversion = new ConversionJob(["C:/scan.pdf", "C:/photos.pdf"], new Preset { TargetFormat = "pdf" }, "Compress PDF");
+        conversion.Files[0].State = FileState.Done;
+        conversion.Files[0].NoticeKey = "notice.pdf_not_smaller";
+        conversion.Files[1].State = FileState.Done;
+        var job = new JobViewModel(conversion, AppHost.Get<ILocalizer>(), AppHost.Get<IPlatformServices>(), _ => { });
+
+        Assert.True(job.HasNotices);
+        Assert.Equal("scan.pdf — Couldn't make it smaller, so it was copied as it is", job.Notices);
+        Assert.False(job.HasErrors);
+    }
+
     private static int Cards(ToastWindow toast) =>
         toast.GetVisualDescendants().OfType<ItemsControl>().Single(c => c.Name == "Jobs").ItemsPanelRoot?.Children.Count ?? 0;
 

@@ -55,8 +55,10 @@ public sealed partial class DonutMenu
 
         // The whole wheel blooms from 90 % with the petals (CSS: .2s cubic-bezier(.18,.82,.24,1)).
         var bloom = 0.9 + 0.1 * opening;
+        // A flip (Filee's back face of the conversion wheel) squeezes the ring about the vertical axis; the hub stays.
+        var flip = FlipTransform(center);
         using (context.PushTransform(Matrix.CreateTranslation(-center.X, -center.Y) * Matrix.CreateScale(bloom, bloom) *
-                                     Matrix.CreateTranslation(center.X, center.Y)))
+                                     Matrix.CreateTranslation(center.X, center.Y) * flip))
         using (context.PushOpacity(opening))
         {
             DrawSoftShadow(context, center, r2 + 2);
@@ -100,9 +102,12 @@ public sealed partial class DonutMenu
         if (reaching >= 0 && reaching < n && Items![reaching].Children is { Count: > 0 } reachable)
             DrawHitBackdrop(context, center, reaching, reachable.Count);
         if (_shownExpanded >= 0 && _shownExpanded < n && _expand.Value > 0.01)
-            DrawSubRing(context, center, bold, regular);
+        {
+            using (context.PushTransform(flip))
+                DrawSubRing(context, center, bold, regular);
+        }
 
-        DrawGlassCenter(context, center, r1, bold);
+        DrawGlassCenter(context, center, r1, bold, regular);
     }
 
     private static void DrawGlassLabel(DrawingContext context, DonutItem item, Point at, double maxWidth, bool hot, Typeface bold)
@@ -134,7 +139,7 @@ public sealed partial class DonutMenu
         DrawCentered(context, label, at.X, at.Y - label.Height / 2);
     }
 
-    private void DrawGlassCenter(DrawingContext context, Point center, double r1, Typeface bold)
+    private void DrawGlassCenter(DrawingContext context, Point center, double r1, Typeface bold, Typeface regular)
     {
         if (string.IsNullOrEmpty(CenterTitle))
             return;
@@ -145,6 +150,13 @@ public sealed partial class DonutMenu
         var pill = new Rect(center.X - width / 2, center.Y - height / 2, width, height);
         context.DrawRectangle(PillFill, PillStroke, pill, height / 2, height / 2);
         DrawCentered(context, text, center.X, center.Y - text.Height / 2);
+        // The flip hint ("Tab ↻ back") under the pill, while the other face has something for these files.
+        if (!string.IsNullOrEmpty(CenterHint))
+        {
+            var hint = MakeText(CenterHint, regular, 10, Ink, Math.Min(r1 * 1.6, 96));
+            using (context.PushOpacity(0.6))
+                DrawCentered(context, hint, center.X, pill.Bottom + 3);
+        }
     }
 
     private void DrawHintCard(DrawingContext context, Point center, double r2, Typeface regular)

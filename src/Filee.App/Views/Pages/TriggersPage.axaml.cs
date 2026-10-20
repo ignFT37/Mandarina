@@ -15,4 +15,11 @@ public partial class TriggersPage : UserControl
         if (sender is ToggleButton { DataContext: TriggerGestureViewModel vm } && vm.IsRecording)
             e.Handled = vm.Record(e.Key, e.KeyModifiers);
     }
+
+    /// <summary>While "Record" is on, the next key pressed on the button flips the donut from now on.</summary>
+    private void OnFlipRecorderKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is ToggleButton { DataContext: FlipOptionsViewModel vm } && vm.IsRecording)
+            e.Handled = vm.Record(e.Key);
+    }
 }

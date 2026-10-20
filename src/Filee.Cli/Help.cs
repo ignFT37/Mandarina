@@ -55,6 +55,7 @@ internal static class Help
               --overwrite        Replace existing output files (default: add a number)
               --skip             Leave existing output files alone
               --keep-dates       Give converted files the created and modified dates of the originals
+              --zip              Save the result of each file as one ZIP (a Shapefile's files together)
               --json             Print the result as JSON (for scripts and other programs)
               --quiet            Print nothing but errors
 
@@ -75,6 +76,7 @@ internal static class Help
                                  converted at start
               --settle <seconds> How long a file must stay unchanged (default 2)
               --keep-dates       Give converted files the created and modified dates of the originals
+              --zip              Save the result of each file as one ZIP (a Shapefile's files together)
               --quiet            Print nothing but errors
 
         """;

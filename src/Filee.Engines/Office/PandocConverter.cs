@@ -2,7 +2,8 @@
 // Adds Markdown ↔ DOCX / ODT / RTF, HTML ↔ DOCX / ODT, the markup languages (reStructuredText, LaTeX, Org, AsciiDoc,
 // Typst, MediaWiki, DocBook, Jupyter notebooks, Textile, man pages, OPML) ↔ Markdown / HTML / DOCX / ODT and each
 // other (and → RTF, EPUB, TXT), and Markdown and the lightweight markups → PPTX slides. Markdown → HTML / TXT / HWPX /
-// DOCX is built in (MarkdownConverter, the HWPX and DOCX writers).
+// DOCX is built in (MarkdownConverter, the HWPX and DOCX writers). Pictures of a text result are extracted into a
+// "<name>_files" folder next to it; Markdown with "Leave out pictures" gets none (a Lua filter drops them).
 
 using Filee.Core.Conversion;
 using Filee.Core.Formats;
@@ -121,7 +122,9 @@ public sealed class PandocConverter : IConverter
         List<string> args = [step.InputPath, "-f", Readers[step.From], "-t", Writers[step.To], "-o", output];
         if (Standalone.Contains(step.To))
             args.Add("--standalone");
-        if (ExtractsMedia.Contains(step.To))
+        if (step.To == "md" && step.Preset.Document.LeaveOutPictures)
+            args.Add("--lua-filter=" + WithoutPictures(step.WorkDirectory));
+        else if (ExtractsMedia.Contains(step.To))
             args.Add("--extract-media=" + Path.Combine(Path.GetDirectoryName(output)!, Path.GetFileNameWithoutExtension(output) + "_files"));
 
         ProcessResult result;
@@ -132,6 +135,21 @@ public sealed class PandocConverter : IConverter
             throw new InvalidOperationException($"Pandoc failed (exit {result.ExitCode}). {result.StandardError.Trim()}");
         progress?.Report(1);
         return [output];
+    }
+
+    /// <summary>
+    /// A Lua filter that drops every picture ("Leave out pictures", DocumentOptions.LeaveOutPictures); a figure keeps
+    /// its caption as text.
+    /// </summary>
+    private static string WithoutPictures(string workDirectory)
+    {
+        Directory.CreateDirectory(workDirectory);
+        var path = Path.Combine(workDirectory, $"no-pictures-{Guid.NewGuid():N}.lua");
+        File.WriteAllText(path, """
+            function Image(image) return {} end
+            function Figure(figure) return figure.caption.long end
+            """);
+        return path;
     }
 
     /// <summary>Uses the selected copy, a bundled copy, then the system installation.</summary>

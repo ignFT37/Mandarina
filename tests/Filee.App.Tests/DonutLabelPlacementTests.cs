@@ -84,6 +84,25 @@ public class DonutLabelPlacementTests
         return (sx / n, sy / n);
     }
 
+    /// <summary>
+    /// A word wider than its slice ("Grayscale" on a thin one) is drawn smaller rather than broken in the middle, and a
+    /// Korean word stays on one line. Chinese, which breaks between any two characters, keeps its size.
+    /// </summary>
+    [AvaloniaFact]
+    public void A_word_wider_than_its_slice_gets_smaller_instead_of_breaking()
+    {
+        TestServices.EnsureInitialized("en");
+        var donut = new DonutMenu();
+        var typeface = new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.SemiBold);
+
+        Assert.Equal(13, donut.LabelSize("Half size", typeface, 60));
+        Assert.InRange(donut.LabelSize("Grayscale", typeface, 40), 10, 12.9);
+        Assert.Equal(10, donut.LabelSize("Supercalifragilistic", typeface, 30)); // no smaller than 10
+        Assert.Equal(13, donut.LabelSize("去除背景去除背景", typeface, 40));
+        Assert.Equal("ZIP 하\u2060나\u2060로", DonutMenu.KeepKoreanWords("ZIP 하나로"));
+        Assert.Equal("Merge PDF", DonutMenu.KeepKoreanWords("Merge PDF"));
+    }
+
     private static (byte[] Pixels, int Width, int Height) Read(Avalonia.Media.Imaging.WriteableBitmap bitmap)
     {
         using var buffer = bitmap.Lock();

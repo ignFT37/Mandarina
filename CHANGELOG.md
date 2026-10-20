@@ -7,11 +7,94 @@ Add a `## <version>` section before tagging a release. Write what someone using 
 find it, what it does and doesn't do.
 
 Start the section with an `<!-- update -->` block (hidden on GitHub). The app's update notice shows its level and its
-one-line summaries in the user's language (`ko`, `en`, `zh`; a line per change, a language may repeat):
+one-line summaries in the user's language (`ko`, `en`, `zh`, `pl`; a line per change, a language may repeat; a language
+without lines shows the English ones):
 
 - `required`: wrong or lost results, security, Filee not starting. The card shows every time Filee starts.
 - `recommended`: bug fixes. The card shows once per version.
 - `optional`: new features only. No card, the sidebar button only.
+
+## 1.12.0
+
+<!-- update
+level: recommended
+ko: PDF를 PowerPoint로, PDF를 더 작은 PDF로 바꿀 수 있어요
+ko: 동영상의 모든 프레임을 그림으로 저장할 수 있어요
+ko: 그래픽 칩으로 동영상을 더 빠르게 인코딩할 수 있어요
+ko: 변환이 끝나면 메모리를 돌려줘서 트레이에서 훨씬 가벼워요
+ko: 창을 닫을 때 트레이에 둘지 종료할지 고를 수 있어요
+ko: 폴란드어를 지원해요
+ko: 일부 SVG가 변환되지 않던 문제와 드롭다운 오류를 고쳤어요
+en: Convert PDF to PowerPoint, or to a smaller PDF
+en: Save every frame of a video as pictures
+en: Encode video faster on the graphics chip
+en: Filee gives memory back after conversions and stays light in the tray
+en: Choose whether closing the window keeps Filee in the tray or quits
+en: Polish translation
+en: Fixed some SVGs that couldn't be converted and an error in dropdowns
+zh: 可以将 PDF 转为 PowerPoint，或压缩为更小的 PDF
+zh: 可以将视频的每一帧保存为图片
+zh: 可以用显卡更快地编码视频
+zh: 转换结束后会释放内存，在托盘中占用更少
+zh: 关闭窗口时可以选择保留在托盘或退出
+zh: 新增波兰语界面
+zh: 修复了部分 SVG 无法转换的问题和下拉列表的错误
+pl: Konwersja PDF do PowerPointa lub do mniejszego PDF
+pl: Zapis każdej klatki wideo jako obrazów
+pl: Szybsze kodowanie wideo na karcie graficznej
+pl: Filee oddaje pamięć po konwersjach i mniej obciąża zasobnik
+pl: Wybór, czy zamknięcie okna zostawia Filee w zasobniku, czy je zamyka
+pl: Język polski
+pl: Naprawiono niektóre pliki SVG, których nie dało się przekonwertować, i błąd w listach rozwijanych
+-->
+
+### New
+
+- **PDF → PowerPoint** (issue #96). "PPTX (slides)" puts a picture of each PDF page on its own slide, at the page's
+  size, with the page's text in the speaker notes. The slides look exactly like the PDF but aren't editable; PDF → DOCX
+  is the editable route. It takes TIFF's place on the PDF donut when you never changed that donut.
+- **Compress PDF** (issue #103). The new "Compress PDF" preset, and a *Compress* option on every PDF → PDF preset, make
+  a PDF smaller while it stays a PDF: pictures shown larger than needed are scaled down (Smallest 72 dpi, Balanced
+  150 dpi, High quality 300 dpi), photos are saved again as JPEG, and everything else is compressed losslessly. Text,
+  fonts, links, bookmarks and forms stay. A PDF that can't be made smaller is left as it was, and the toast says so.
+  With Ghostscript installed, *Also try Ghostscript* keeps the smaller of the two results.
+- **Every frame of a video** (issue #63, by @pleguen). "Extract frames (PNG)" and "Extract frames (JPG)", or *Save
+  every frame of a video* in a PNG or JPG preset, write each frame (or every Nth) into a folder next to the video. A
+  video that would give more than 100,000 pictures or fill the disk is refused before it starts. Add the presets to a
+  donut in Settings → Toolbar.
+- **Hardware video encoding** (issue #100). *Use hardware acceleration (graphics chip)* in a video preset encodes
+  H.264 and HEVC with NVENC, Quick Sync, AMF, VideoToolbox or VA-API: much faster and lighter on power, slightly larger
+  at the same quality. Without a usable chip, the video is encoded as before. Off by default.
+- **Closing the window** (issue #111). The first time you close the main window, Filee asks whether to keep running in
+  the tray or quit, with "Don't ask again". Settings → General → "When I close the window" changes it later.
+- **Request a format** (issue #117). When you bring files Filee can't read to the donut, or a conversion fails for
+  that reason, *Request this format* opens a GitHub form with the extension filled in (only the extension, never a
+  file name). Encrypted or copy-protected (DRM) files can't be converted, whatever their format.
+- **Ubuntu 22.04** (issue #102). The Linux packages run on Ubuntu 22.04 and newer again, global gestures included.
+- **Polish** (by @rafek1241). Filee speaks Polish, and picks it when Windows, macOS or Linux does.
+- **Other file managers** (issue #124). Gestures set to "File managers and desktop" also start over Files, Directory
+  Opus, Total Commander, XYplorer, OneCommander, Q-Dir and FreeCommander, not only Explorer.
+- **calibre for e-book PDFs** (issue #127). With calibre installed and moved above the HWPX writer in Settings →
+  Engines, EPUB, MOBI, AZW3 and other e-books become PDFs through calibre, much faster for long books.
+
+### Improved
+
+- **Memory** (issue #119). Half a minute after the last conversion Filee gives the memory back: Task Manager shows it
+  at a few tens of MB in the tray instead of several hundred. Closing the main window releases it; it opens again where
+  and on the page you left it.
+- **Running as administrator** (issue #99). Explorer can't drop files on a Filee that runs as administrator or use its
+  menu. Filee now notices it, says so on Home, and offers *Restart without administrator rights*. A second launch that
+  can't reach the running Filee says why instead of quitting silently.
+
+### Fixed
+
+- SVGs with an unescaped "&" or HTML entities such as `&nbsp;` in their text (often from AI tools) failed with "An
+  error occurred while parsing EntityName" (issue #120).
+- Pressing Ctrl+Space twice in a dropdown, or Ctrl+clicking the selected item, showed an error (issue #107).
+- Long e-books to PDF stopped at 95 % after two minutes (issue #127): the time limit now grows with the text, up to
+  an hour.
+- "Retry gestures" could leave gestures dead while Filee said they were running (by @leishifu666).
+- calibre couldn't be downloaded on macOS and Linux: it now comes from calibre's own server.
 
 ## 1.11.0
 

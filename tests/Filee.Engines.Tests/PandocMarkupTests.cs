@@ -186,6 +186,28 @@ public class PandocMarkupTests(EngineFixture fx) : IClassFixture<EngineFixture>
     }
 
     [Fact]
+    public async Task Docx_to_markdown_extracts_the_pictures_or_leaves_them_out()
+    {
+        SkipUnlessInstalled();
+        var source = await WriteAsync("memo.md", "# Memo\n\nBefore the chart.\n\n![](chart.png)\n\nAfter the chart.\n");
+        EngineFixture.MakeImage(Path.GetDirectoryName(source)!, "chart.png", ImageMagick.MagickFormat.Png);
+        var docx = await ConvertAsync(source, "docx");
+        File.Delete(source);
+        Assert.Equal("pandoc", Assert.Single(fx.Catalog.CreatePlanner().Plan("docx", "md")!.Steps).Converter.Id);
+
+        var withPictures = await File.ReadAllTextAsync(await ConvertAsync(docx, "md"), TestContext.Current.CancellationToken);
+        Assert.Contains("memo_files", withPictures);
+
+        var job = await fx.ConvertAsync([docx], new Preset { TargetFormat = "md", Document = { LeaveOutPictures = true } });
+        Assert.True(job.State == JobState.Completed, string.Join("; ", job.Files.Select(f => $"{f.ErrorKey} {f.ErrorDetail}")));
+        var textOnly = await File.ReadAllTextAsync(job.Outputs.Single(), TestContext.Current.CancellationToken);
+        Assert.DoesNotContain("![", textOnly);
+        Assert.DoesNotContain("<img", textOnly);
+        Assert.Contains("Before the chart.", textOnly);
+        Assert.Contains("After the chart.", textOnly);
+    }
+
+    [Fact]
     public async Task Latex_to_markdown_epub_and_back()
     {
         SkipUnlessInstalled();

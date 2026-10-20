@@ -269,6 +269,56 @@ public class ToolbarPageTests
     }
 
     [AvaloniaFact]
+    public void Reset_puts_a_built_in_profile_back_and_the_list_follows()
+    {
+        TestServices.EnsureInitialized("en");
+        var store = AppHost.Get<UserDataStore>();
+        var presets = store.Presets.ToList();
+        var profiles = store.Profiles.Select(p => p.Clone()).ToList();
+        try
+        {
+            var vm = new ToolbarPageViewModel(store, AppHost.Get<Filee.Core.Localization.ILocalizer>(), AppHost.Get<WindowService>());
+            var item = vm.Profiles.Single(p => p.Profile.Id == "images");
+            vm.SelectedProfile = item;
+            Assert.True(vm.CanReset);
+            vm.ProfileName = "Pictures";
+            vm.RemoveAt(0);
+            vm.IsMixed = true; // moves behind "Mixed files"
+            Assert.Same(item.Profile, store.Profiles[^1]);
+
+            vm.Reset(item);
+
+            var builtIn = Filee.Core.Presets.BuiltInData.CreateProfiles().Single(p => p.Id == "images");
+            Assert.Same(item, vm.SelectedProfile);
+            Assert.Equal("Images", item.Name);
+            Assert.Equal("Images", vm.ProfileName);
+            Assert.Equal("Images", vm.CenterTitle);
+            Assert.False(vm.IsMixed);
+            Assert.NotNull(vm.ExtensionTags);
+            Assert.Equal(builtIn.PresetIds, vm.DonutItems.Select(d => d.Id));
+            Assert.Equal($"{builtIn.PresetIds.Count}", item.Count);
+            Assert.Equal(store.Profiles.Select(p => p.Id), vm.Profiles.Select(p => p.Profile.Id));
+            Assert.Equal(store.Profiles.FindIndex(p => p.IsFallback) - 1, store.Profiles.IndexOf(item.Profile));
+
+            // A new profile has nothing to go back to.
+            vm.AddProfileCommand.Execute(null);
+            Assert.False(vm.CanReset);
+            Assert.True(vm.CanDelete);
+            var mine = vm.SelectedProfile!;
+            vm.Reset(mine);
+            Assert.Equal("New profile", mine.Name);
+        }
+        finally
+        {
+            store.Presets.Clear();
+            store.Presets.AddRange(presets);
+            store.Profiles.Clear();
+            store.Profiles.AddRange(profiles);
+            store.SaveLibrary();
+        }
+    }
+
+    [AvaloniaFact]
     public void The_last_mixed_profile_stays_mixed()
     {
         TestServices.EnsureInitialized("en");

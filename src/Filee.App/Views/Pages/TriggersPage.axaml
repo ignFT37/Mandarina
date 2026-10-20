@@ -126,6 +126,36 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
+    <!-- Flipping the open donut to its other face: a key (recorded) and the mouse wheel -->
+    <Border x:Name="FlipCard" Classes="card">
+      <StackPanel Spacing="10" DataContext="{Binding Flip}" x:DataType="vm:FlipOptionsViewModel">
+        <TextBlock Classes="label" Text="{DynamicResource triggers.flip_title}" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{DynamicResource triggers.flip_description}" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="{DynamicResource triggers.key}" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <Border Classes="badge" MinWidth="120" Padding="12,6">
+            <TextBlock Text="{Binding KeyText}" FontWeight="SemiBold" />
+          </Border>
+          <ToggleButton x:Name="FlipRecorder" IsChecked="{Binding IsRecording}" KeyDown="OnFlipRecorderKeyDown">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="12" Height="12" Data="{StaticResource Icon.Record}" Foreground="{DynamicResource DangerBrush}" />
+              <TextBlock Text="{DynamicResource triggers.record}" />
+            </StackPanel>
+          </ToggleButton>
+          <Button Classes="ghost" Content="{DynamicResource triggers.flip_reset}" Command="{Binding ResetKeyCommand}" />
+          <Button Classes="ghost" Content="{DynamicResource triggers.clear}" Command="{Binding ClearKeyCommand}" />
+        </StackPanel>
+        <TextBlock Classes="caption danger" TextWrapping="Wrap" Text="{Binding Error}"
+                   IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <DockPanel>
+          <ToggleSwitch x:Name="FlipWheel" DockPanel.Dock="Right" OnContent="{x:Null}" OffContent="{x:Null}" MinWidth="0"
+                        Margin="12,0,0,0" VerticalAlignment="Center" IsChecked="{Binding FlipWithWheel}"
+                        AutomationProperties.Name="{DynamicResource triggers.flip_wheel}" />
+          <TextBlock Text="{DynamicResource triggers.flip_wheel}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+
     <Border Classes="card">
       <StackPanel Spacing="8" DataContext="{Binding ExcludedApps}" x:DataType="vm:ExcludedAppsViewModel">
         <TextBlock Classes="label" Text="{DynamicResource triggers.excluded}" />

@@ -77,9 +77,15 @@ internal static class ImageEncoder
     /// <summary>Formats holding one picture in several sizes (icons) or mipmaps: the largest is converted.</summary>
     private static readonly HashSet<string> SizeVariants = ["ico", "cur", "dds"];
 
-    /// <summary>Every format ImageMagick reads as input: the raster formats plus, on Windows, the metafiles.</summary>
+    /// <summary>Packages of a picture and more, of which the picture is read (<see cref="ImageReader"/>): an iPhone LIVP.</summary>
+    public static readonly string[] Packages = ["livp"];
+
+    /// <summary>
+    /// Every format ImageMagick reads as input: the raster formats, the picture of <see cref="Packages"/> and, on
+    /// Windows, the metafiles.
+    /// </summary>
     public static IEnumerable<string> Sources =>
-        OperatingSystem.IsWindows() ? [.. Readable, .. Metafiles] : Readable;
+        OperatingSystem.IsWindows() ? [.. Readable, .. Packages, .. Metafiles] : [.. Readable, .. Packages];
 
     public static MagickFormat ToMagickFormat(string formatId) => formatId switch
     {

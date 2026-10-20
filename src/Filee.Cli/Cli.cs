@@ -152,7 +152,8 @@ internal static class Cli
         var source = Shorten(file.SourcePath);
         return file.State switch
         {
-            FileState.Done => $"ok    {source} -> {string.Join(", ", file.Outputs.Select(Shorten))}",
+            FileState.Done => $"ok    {source} -> {string.Join(", ", file.Outputs.Select(Shorten))}"
+                + (file.NoticeKey is null ? "" : $" ({texts[file.NoticeKey]})"),
             FileState.Skipped => $"skip  {source} (the output file already exists)",
             FileState.Cancelled => $"stop  {source} (cancelled)",
             _ => $"fail  {source}: {Error(file, texts)}",
@@ -195,6 +196,8 @@ internal static class Cli
                 json.WriteEndArray();
                 if (file.State is FileState.Failed or FileState.Cancelled)
                     json.WriteString("error", Error(file, texts));
+                else if (file.NoticeKey is not null)
+                    json.WriteString("notice", texts[file.NoticeKey]);
                 json.WriteEndObject();
             }
             json.WriteEndArray();
@@ -229,7 +232,7 @@ internal static class Cli
                 ?? presets.FirstOrDefault(p => string.Equals(host.Texts.DisplayName(p), wanted, StringComparison.OrdinalIgnoreCase));
             // Conversions first: a group of the same name (say a "Rotate" group next to your own "Rotate" preset)
             // must not hide one. A group is only found to say what it holds.
-            var found = Find(host.Store.Presets.Where(p => !p.IsGroup)) ?? Find(host.Store.Presets);
+            var found = Find(host.Store.Presets.Where(p => !p.IsGroup && !p.IsTool)) ?? Find(host.Store.Presets);
             if (found is null)
             {
                 errors.WriteLine($"filee: no preset '{wanted}'. Run 'filee presets' for the list.");
@@ -244,6 +247,11 @@ internal static class Cli
                     : $"filee: '{wanted}' is a group on the donut, not a conversion, and has no presets left. Run 'filee presets' for the list.");
                 return null;
             }
+            if (found.IsTool)
+            {
+                errors.WriteLine($"filee: '{wanted}' is an interactive tool, not a conversion.");
+                return null;
+            }
             preset = found.Clone();
         }
         preset = host.Store.Settings.WithDefaultOutput(preset);
@@ -253,6 +261,8 @@ internal static class Cli
             preset.Output.Conflict = conflict;
         if (options.KeepDates)
             preset.Output.KeepDates = true;
+        if (options.Zip)
+            preset.Output.ZipResult = true;
         return preset;
     }
 
@@ -309,7 +319,10 @@ internal static class Cli
                 return UsageError;
             }
             var installed = host.Catalog.CreatePlanner();
-            var everything = host.Catalog.CreatePlanner(host.Catalog.All.Select(c => c.Id).ToList());
+            // Engines a download would add, not those this platform lacks (JPEG XR is read with Windows' own codec).
+            var everything = host.Catalog.CreatePlanner(host.Catalog.All
+                .Where(c => host.Catalog.StatusOf(c).ReasonKey != "engine.reason.unsupported_platform")
+                .Select(c => c.Id).ToList());
             var targets = FormatRegistry.Known.Where(t => t.Writable && t.Id != from.Id && t.Id != FormatRegistry.Folder).ToList();
             var now = targets.Where(t => installed.CanConvert(from.Id, t.Id)).Select(t => t.Id).ToList();
             var later = targets.Where(t => !now.Contains(t.Id) && everything.CanConvert(from.Id, t.Id)).Select(t => t.Id).ToList();
@@ -334,7 +347,7 @@ internal static class Cli
     private static int ListPresets(CliHost host, TextWriter output)
     {
         output.WriteLine($"{"ID",-24} {"NAME",-28} TARGET");
-        foreach (var preset in host.Store.Presets.Where(p => !p.IsGroup))
+        foreach (var preset in host.Store.Presets.Where(p => !p.IsGroup && !p.IsTool))
             output.WriteLine($"{preset.Id,-24} {host.Texts.DisplayName(preset),-28} {preset.TargetFormat}");
         output.WriteLine();
         output.WriteLine("Use one with: filee convert <files> --preset <id or name>");

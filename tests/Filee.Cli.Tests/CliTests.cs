@@ -49,6 +49,20 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public async Task Zip_saves_the_result_of_each_file_as_one_zip()
+    {
+        var geojson = Path.Combine(_folder, "places.geojson");
+        File.WriteAllText(geojson, """{"type":"Feature","properties":{"n":1},"geometry":{"type":"Point","coordinates":[1,2]}}""");
+
+        var (code, _, _) = await Run("convert", geojson, "--to", "shp", "--zip");
+
+        Assert.Equal(Cli.Success, code);
+        using var zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(_folder, "places.zip"));
+        Assert.Equal(["places.cpg", "places.dbf", "places.prj", "places.shp", "places.shx"], zip.Entries.Select(e => e.Name).Order().ToArray());
+        Assert.False(File.Exists(Path.Combine(_folder, "places.shp")));
+    }
+
+    [Fact]
     public async Task Keep_dates_copies_the_dates_of_the_originals()
     {
         var source = Png("old.png");
@@ -77,6 +91,30 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public async Task Compress_pdf_says_when_a_pdf_cant_get_smaller()
+    {
+        var source = Path.Combine(_folder, "scan.pdf");
+        using (var image = new ImageMagick.MagickImage("gradient:#C04020-#2060C0", 1800, 1800))
+        {
+            image.AddNoise(ImageMagick.NoiseType.Gaussian, 0.6);
+            image.Density = new ImageMagick.Density(600);
+            image.Write(source, ImageMagick.MagickFormat.Pdf);
+        }
+
+        var (code, output, errors) = await Run("convert", source, "--preset", "compress-pdf", "--json");
+        Assert.Equal(Cli.Success, code);
+        var compressed = Path.Combine(_folder, "scan_compressed.pdf");
+        Assert.True(new FileInfo(compressed).Length < new FileInfo(source).Length / 2, errors);
+        using (var json = JsonDocument.Parse(output))
+            Assert.False(json.RootElement.GetProperty("files")[0].TryGetProperty("notice", out _));
+
+        // Compressed already: written unchanged, with a note.
+        (code, output, _) = await Run("convert", compressed, "--preset", "compress-pdf");
+        Assert.Equal(Cli.Success, code);
+        Assert.Contains("scan_compressed_compressed.pdf (Couldn't make it smaller", output);
+    }
+
+    [Fact]
     public async Task A_folder_converts_the_files_filee_knows()
     {
         Png("a.png");
@@ -98,6 +136,18 @@ public sealed class CliTests : IDisposable
 
         Assert.Equal(Cli.SomeFailed, code);
         Assert.Contains("fail", output);
+    }
+
+    [Fact]
+    public async Task An_empty_file_says_it_is_empty()
+    {
+        var empty = Path.Combine(_folder, "new.docx");
+        File.WriteAllBytes(empty, []);
+
+        var (code, output, _) = await Run("convert", empty, "--to", "pdf");
+
+        Assert.Equal(Cli.SomeFailed, code);
+        Assert.Contains("new.docx: The file is empty (0 bytes).", output);
     }
 
     [Theory]
@@ -167,6 +217,17 @@ public sealed class CliTests : IDisposable
         (code, output, _) = await Run("presets");
         Assert.Equal(Cli.Success, code);
         Assert.Contains("to-png", output);
+    }
+
+    [Fact]
+    public async Task Jpeg_xr_converts_on_windows_and_is_no_download_away_elsewhere()
+    {
+        var (code, output, _) = await Run("formats", "jxr");
+
+        Assert.Equal(Cli.Success, code);
+        Assert.Equal(OperatingSystem.IsWindows(), output.Contains("png, jpg", StringComparison.Ordinal));
+        // Elsewhere no download would help (on Windows, FFmpeg adds HEIC and video).
+        Assert.Equal(OperatingSystem.IsWindows(), output.Contains("optional engines", StringComparison.Ordinal));
     }
 
     /// <summary>Adds presets to the settings folder the CLI runs with.</summary>
@@ -278,5 +339,15 @@ public sealed class CliTests : IDisposable
         Assert.Contains("한글 report's", Path.GetFileName(result));
         Assert.True(File.Exists(result));
         Assert.True(File.Exists(source));
+    }
+
+    [Fact]
+    public async Task Refuses_tool_presets()
+    {
+        var source = Png("photo.png");
+        var (code, _, errors) = await Run("convert", source, "--preset", "tool-crop");
+
+        Assert.Equal(Cli.UsageError, code);
+        Assert.Contains("is an interactive tool, not a conversion", errors);
     }
 }

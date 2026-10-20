@@ -11,28 +11,80 @@ using Filee.Core.Localization;
 using Filee.Core.Presets;
 using Filee.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Filee.App.Services;
 
-public sealed class WindowService(ILocalizer loc, IServiceProvider services)
+public sealed class WindowService(ILocalizer loc, IServiceProvider services, MemoryTrimmer trimmer)
 {
     private MainWindow? _main;
+    private MainWindowPlacement? _mainPlacement;
     private ToastWindow? _toast;
     private EngineSetupWindow? _engineSetup;
     private UpdateNoticeWindow? _updateNotice;
     private EngineUpdateNoticeWindow? _engineNotice;
     private FeedbackNoticeWindow? _feedbackNotice;
+    private FormatRequestNoticeWindow? _formatRequestNotice;
+    private WhatsNewWindow? _whatsNew;
+
+    internal FormatRequestNoticeWindow? FormatRequestNotice => _formatRequestNotice;
+
+    private CropOverlayWindow? _cropOverlay;
 
     public MainWindow? Main => _main;
 
-    /// <summary>Shows (or brings to front) the main window, optionally on a page.</summary>
+    /// <summary>Opens the interactive crop overlay for the files.</summary>
+    public void ShowCropOverlay(IReadOnlyList<string> files, Preset preset, PixelPoint? near = null)
+    {
+        if (files.Count == 0)
+            return;
+        _cropOverlay?.Close();
+        var store = services.GetRequiredService<UserDataStore>();
+        var log = services.GetService<ILogger<CropOverlayViewModel>>();
+        var vm = new CropOverlayViewModel(files, preset, loc, store, log);
+        var win = new CropOverlayWindow { DataContext = vm };
+        win.PositionOnScreen(near);
+        win.Closed += (_, _) =>
+        {
+            if (_cropOverlay == win)
+                _cropOverlay = null;
+        };
+        _cropOverlay = win;
+        win.Show();
+        win.Activate();
+    }
+
+    /// <summary>
+    /// Shows (or brings to front) the main window, optionally on a page. Going to the tray closes it
+    /// (<see cref="MainWindow.HideToTray"/>): a new one opens where and on the page the last one was.
+    /// </summary>
     public void ShowMain(string? page = null)
     {
         Motion.Refresh();
         if (_main is null)
         {
-            _main = new MainWindow { DataContext = services.GetRequiredService<MainWindowViewModel>() };
-            _main.Closed += (_, _) => _main = null;
+            var model = ActivatorUtilities.CreateInstance<MainWindowViewModel>(services);
+            var main = new MainWindow { DataContext = model };
+            if (_mainPlacement is { } placement)
+            {
+                placement.ApplyTo(main);
+                if (page is null)
+                    model.Navigate(placement.Page);
+            }
+            main.Closing += (_, _) =>
+            {
+                // While it is still on screen: the release closes it hidden, when its position may no longer be known.
+                if (main.IsVisible)
+                    _mainPlacement = MainWindowPlacement.Of(main, model, _mainPlacement);
+            };
+            main.Closed += (_, _) =>
+            {
+                if (_main == main)
+                    _main = null;
+                model.Dispose();
+                trimmer.Request();
+            };
+            _main = main;
         }
         if (page is not null && _main.DataContext is MainWindowViewModel vm)
             vm.Navigate(page);
@@ -42,7 +94,39 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services)
         if (_main.WindowState == WindowState.Minimized)
             _main.WindowState = WindowState.Normal;
         _main.Activate();
+        MainShown?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Raised whenever <see cref="ShowMain"/> showed the main window (the user opened Filee).</summary>
+    public event EventHandler? MainShown;
+
+    /// <summary>
+    /// Shows a version's "What's new" slides, centred on the main window when it is open; a second call replaces the
+    /// open window's slides.
+    /// </summary>
+    public void ShowWhatsNew(Controls.SlideDeck deck)
+    {
+        _whatsNew?.Close();
+        Motion.Refresh();
+        var window = new WhatsNewWindow(deck, loc);
+        window.Closed += (_, _) =>
+        {
+            if (_whatsNew == window)
+                _whatsNew = null;
+            trimmer.Request();
+        };
+        _whatsNew = window;
+        if (_main is { IsVisible: true } main && main.WindowState != WindowState.Minimized)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            window.Show(main);
+        }
+        else
+            window.Show();
+        window.Activate();
+    }
+
+    internal WhatsNewWindow? WhatsNew => _whatsNew;
 
     /// <summary>Opens the optional-engine choice (first run); a second call brings the open window to front.</summary>
     /// <summary>
@@ -128,6 +212,33 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services)
         _feedbackNotice = new FeedbackNoticeWindow();
         _feedbackNotice.Closed += (_, _) => _feedbackNotice = null;
         _feedbackNotice.Show();
+    }
+
+    /// <summary>Shows the "Filee is running as administrator" card in the bottom-right corner (once per run).</summary>
+    public void ShowElevationNotice()
+    {
+        if (_elevationNoticeShown)
+            return;
+        _elevationNoticeShown = true;
+        new ElevationNoticeWindow(services.GetRequiredService<ElevationService>()).Show();
+    }
+
+    private bool _elevationNoticeShown;
+
+    /// <summary>
+    /// Shows the "Filee can't convert .ncm files yet" card with "Request this format", replacing an earlier one.
+    /// </summary>
+    public void ShowFormatRequestNotice(IReadOnlyList<string> extensions)
+    {
+        _formatRequestNotice?.Close();
+        var notice = new FormatRequestNoticeWindow(extensions, loc.Format("format_request.notice_title", FormatRequest.Label(extensions)));
+        notice.Closed += (_, _) =>
+        {
+            if (_formatRequestNotice == notice)
+                _formatRequestNotice = null;
+        };
+        _formatRequestNotice = notice;
+        notice.Show();
     }
 
     /// <summary>Opens the preset popup. Returns true when the user saved (the preset object was updated).</summary>
@@ -248,4 +359,34 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services)
 
     private static Window? MainWindowOrNull() =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+    /// <summary>Where the main window was and which page it showed, for the next one.</summary>
+    private sealed record MainWindowPlacement(PixelPoint? Position, Size? Size, bool Maximized, string Page)
+    {
+        /// <summary>The window's placement. Maximized or minimized, it keeps the position and size it had before.</summary>
+        public static MainWindowPlacement Of(MainWindow window, MainWindowViewModel vm, MainWindowPlacement? last) =>
+            window.WindowState switch
+            {
+                WindowState.Normal => new(window.Position, window.ClientSize, false, vm.SelectedItem.Key),
+                WindowState.Maximized => (last ?? new(null, null, false, "")) with { Maximized = true, Page = vm.SelectedItem.Key },
+                _ => (last ?? new(null, null, false, "")) with { Page = vm.SelectedItem.Key },
+            };
+
+        public void ApplyTo(MainWindow window)
+        {
+            // Only on a screen that is still there (a monitor may have been unplugged since).
+            if (Position is { } position && window.Screens.ScreenFromPoint(position) is not null)
+            {
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Position = position;
+            }
+            if (Size is { } size)
+            {
+                window.Width = size.Width;
+                window.Height = size.Height;
+            }
+            if (Maximized)
+                window.WindowState = WindowState.Maximized;
+        }
+    }
 }

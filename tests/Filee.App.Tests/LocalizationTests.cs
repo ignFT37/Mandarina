@@ -1,9 +1,10 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Filee.App.Services;
 
 namespace Filee.App.Tests;
 
-/// <summary>Keeps en / ko / zh-CN in sync so no language silently falls back to English.</summary>
+/// <summary>Keeps en / es / ja / ko / zh-CN / pl / hi / ru in sync so no language silently falls back to English.</summary>
 public partial class LocalizationTests
 {
     private static string I18nDirectory
@@ -57,6 +58,24 @@ public partial class LocalizationTests
             .ToList();
 
         Assert.Empty(missing);
+    }
+
+    // Mandarina: Filee's tests that Russian and Japanese are offered are gone: Mandarina offers en, es, ko and zh-CN only.
+    /// <summary>Han characters look different in Japanese, Korean and Chinese fonts: the UI language's come first.</summary>
+    [Theory]
+    [InlineData("ja", "Noto Sans JP", "Yu Gothic UI")]
+    [InlineData("ko", "Noto Sans KR", "Malgun Gothic")]
+    [InlineData("zh-CN", "Noto Sans SC", "Microsoft YaHei")]
+    [InlineData("en", "Noto Sans KR", "Malgun Gothic")]
+    public void The_ui_languages_cjk_fonts_come_first(string language, string embedded, string system)
+    {
+        var families = ThemeService.FontFamilies(language).Split(", ").Select(f => f.Replace("fonts:Filee#", "")).ToList();
+        string[] embeddedCjk = ["Noto Sans JP", "Noto Sans KR", "Noto Sans SC"];
+        string[] systemCjk = ["Yu Gothic UI", "Malgun Gothic", "Microsoft YaHei"];
+
+        Assert.Equal(embedded, families.First(embeddedCjk.Contains));
+        Assert.Equal(system, families.First(systemCjk.Contains));
+        Assert.True(embeddedCjk.Max(families.IndexOf) < systemCjk.Min(families.IndexOf), "embedded fonts before system ones");
     }
 
     private static HashSet<string> Placeholders(string text) =>

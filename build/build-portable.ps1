@@ -1,10 +1,18 @@
+# Builds the Linux or macOS portable package (tar.gz + SHA256SUMS) on its own operating system.
+#
+# Linux packages must run on Ubuntu 22.04 (glibc 2.35). rhwp's Linux release needs a newer glibc, so CI builds it from
+# source on Ubuntu 22.04 (build/build-linux-native.py) and passes it in:
+#   -RhwpOverride <dir>  a folder with the rhwp program (rhwp's release archive layout) used instead of the rhwp
+#                        download pinned in engines.json
+# Without it (local builds) the package uses the download, which needs a newer glibc.
 [CmdletBinding()]
 param(
     [ValidateSet('linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')][string]$Runtime,
     [string]$Version,
     [string]$OutputDir = (Join-Path $PSScriptRoot '../Releases'),
     [string]$SigningIdentity = '-',
-    [switch]$SkipFonts
+    [switch]$SkipFonts,
+    [string]$RhwpOverride
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,6 +24,15 @@ if (-not $Runtime) {
 }
 if (($Runtime.StartsWith('osx-') -and -not $IsMacOS) -or ($Runtime.StartsWith('linux-') -and -not $IsLinux)) {
     throw "Build $Runtime on its native operating system."
+}
+if ($RhwpOverride -and -not $Runtime.StartsWith('linux-')) {
+    throw '-RhwpOverride is for Linux packages.'
+}
+if ($RhwpOverride) {
+    $RhwpOverride = (Resolve-Path -LiteralPath $RhwpOverride).Path
+    if (-not (Test-Path -LiteralPath (Join-Path $RhwpOverride 'rhwp') -PathType Leaf)) {
+        throw "-RhwpOverride: $RhwpOverride has no rhwp program."
+    }
 }
 if (-not $Version) {
     $Version = ([xml](Get-Content -LiteralPath (Join-Path $root 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version |
@@ -52,7 +69,16 @@ foreach ($project in @('Filee.App', 'Filee.Cli')) {
             "-p:Version=$Version" -p:FileeRelease=true -p:PublishReadyToRun=false -o $publish
     }
 }
-& (Join-Path $PSScriptRoot 'fetch-portable-engines.ps1') -Runtime $Runtime -Destination (Join-Path $publish 'engines')
+$engines = Join-Path $publish 'engines'
+if ($RhwpOverride) {
+    & (Join-Path $PSScriptRoot 'fetch-portable-engines.ps1') -Runtime $Runtime -Destination $engines -Only 7zip
+    Copy-Item -LiteralPath $RhwpOverride -Destination (Join-Path $engines 'rhwp') -Recurse
+    Invoke-Checked 'rhwp permissions' { chmod +x (Join-Path $engines 'rhwp/rhwp') }
+    Write-Host "rhwp from $RhwpOverride"
+}
+else {
+    & (Join-Path $PSScriptRoot 'fetch-portable-engines.ps1') -Runtime $Runtime -Destination $engines
+}
 foreach ($name in @('Filee', 'filee-cli')) {
     $executable = Join-Path $publish $name
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Publish did not produce $name" }
@@ -111,6 +137,7 @@ else {
     Copy-Item -LiteralPath (Join-Path $root 'installer/linux/install.sh') -Destination $package
     Copy-Item -LiteralPath (Join-Path $root 'installer/linux/uninstall.sh') -Destination $package
     Copy-Item -LiteralPath (Join-Path $root 'installer/linux/INSTALL.txt') -Destination $package
+    Copy-Item -LiteralPath (Join-Path $root 'installer/linux/kwin') -Destination $package -Recurse
 }
 Invoke-Checked 'Installer permissions' { chmod +x (Join-Path $package 'install.sh') (Join-Path $package 'uninstall.sh') }
 $temporaryArchive = "$archive.$([Guid]::NewGuid().ToString('N')).partial"

@@ -1,6 +1,7 @@
 // Removes per-user integration and downloaded engines after Filee exits. User settings remain for reinstalling.
 
 using Filee.Core.Platform;
+using Filee.Core.Settings;
 using Filee.Platform.Linux;
 using Filee.Platform.MacOS;
 using Filee.Platform.Windows;
@@ -13,11 +14,16 @@ internal static class UninstallCleanup
     {
         var platform = PlatformLayers.Create();
         var succeeded = true;
-        Clean(() => platform.SetContextMenu(false, "", ""));
-        Clean(() => platform.SetStartWithSystem(false, ""));
-        if (PlatformLayers.IsLinux(platform))
+        // A copy with its own data folder (FILEE_DATA_DIR) never registered anything: only its engines go.
+        var integrated = UserDataStore.OverrideDirectory is null;
+        if (integrated)
+        {
+            Clean(() => platform.SetContextMenu(false, "", ""));
+            Clean(() => platform.SetStartWithSystem(false, ""));
+        }
+        if (integrated && PlatformLayers.IsLinux(platform)) // Mandarina: platform may be wrapped
             Clean(() => PlatformLayers.SetThunarShortcut(platform, null));
-        if (OperatingSystem.IsWindows() && ExplorerMenuRegistration.IsSupportedOs)
+        if (integrated && OperatingSystem.IsWindows() && ExplorerMenuRegistration.IsSupportedOs)
         {
             Clean(() =>
             {

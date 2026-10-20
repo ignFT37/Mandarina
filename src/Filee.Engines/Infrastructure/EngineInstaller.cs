@@ -310,7 +310,8 @@ public sealed class EngineInstaller
 
     /// <summary>
     /// The folder to keep from an administratively installed MSI, which lays files out as they would be installed
-    /// (PFiles64\...): LibreOffice's folder with program/ and share/ (trimmed), calibre's folder with ebook-convert.
+    /// (PFiles64\...): LibreOffice's folder with program/ and share/ (trimmed, with its C++ runtime copied into
+    /// program/), calibre's folder with ebook-convert (it keeps its own C++ runtime in app/bin).
     /// </summary>
     private static string MsiProgramFolder(string id, string staging)
     {
@@ -324,6 +325,7 @@ public sealed class EngineInstaller
                       ?? throw new InvalidDataException("soffice.exe not found in the LibreOffice package.");
         var libreOffice = Path.GetDirectoryName(Path.GetDirectoryName(soffice)!)!; // folder with program/, share/
         TrimLibreOffice(libreOffice);
+        AppLocalRuntime.CopyLibreOfficeRuntime(libreOffice);
         return libreOffice;
     }
 

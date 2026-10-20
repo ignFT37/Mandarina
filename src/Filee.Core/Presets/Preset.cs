@@ -16,6 +16,12 @@ public enum PresetKind
     /// conversion is picked (preset list, watch folders, <c>filee --preset</c>).
     /// </summary>
     Group,
+
+    /// <summary>
+    /// Opens its own window on the dropped files instead of converting them (the interactive Crop). Like a group,
+    /// never offered where a conversion is picked.
+    /// </summary>
+    Tool,
 }
 
 /// <summary>
@@ -119,6 +125,38 @@ public sealed class Preset
     /// <summary>True for a <see cref="PresetKind.Group"/>.</summary>
     [JsonIgnore]
     public bool IsGroup => Kind == PresetKind.Group;
+
+    /// <summary>True for "Compress into one archive": files and folders go into one archive as they are.</summary>
+    [JsonIgnore]
+    public bool PacksIntoOneArchive =>
+        Archive.CombineIntoOne
+        && Formats.FormatRegistry.FindById(TargetFormat) is { Category: Formats.FormatCategory.Archive } archive
+        && archive.Id != Formats.FormatRegistry.Folder;
+
+    /// <summary>
+    /// True if converting a <paramref name="sourceFormat"/> file saves every frame as a picture
+    /// (<see cref="MediaOptions.SaveEveryFrame"/>): the file is a video and the target one of
+    /// <see cref="MediaOptions.FrameTargets"/>. Other files, and other targets, convert as usual.
+    /// </summary>
+    public bool SavesFramesOf(string sourceFormat) =>
+        Media.SaveEveryFrame
+        && MediaOptions.FrameTargets.Contains(TargetFormat)
+        && Formats.FormatRegistry.FindById(sourceFormat)?.Category == Formats.FormatCategory.Video;
+
+    /// <summary>
+    /// True if converting a <paramref name="sourceFormat"/> file takes the video of a Live / Motion Photo instead of a
+    /// video of the still picture: the target is one of <see cref="MediaOptions.MotionPhotoTargets"/> and the source one
+    /// of <see cref="MediaOptions.MotionPhotoSources"/>, with <see cref="MediaOptions.ExtractMotionPhoto"/> on. A LIVP
+    /// (an iPhone photo and its MOV in one ZIP) always gives its video. Other pictures (GIF, PNG, …) convert as usual.
+    /// </summary>
+    public bool ExtractsMotionOf(string sourceFormat) =>
+        MediaOptions.MotionPhotoTargets.Contains(TargetFormat)
+        && MediaOptions.MotionPhotoSources.Contains(sourceFormat)
+        && (Media.ExtractMotionPhoto || sourceFormat == "livp");
+
+    /// <summary>True for a <see cref="PresetKind.Tool"/>.</summary>
+    [JsonIgnore]
+    public bool IsTool => Kind == PresetKind.Tool;
 
     /// <summary>Creates a new random preset id.</summary>
     public static string NewId() => Guid.NewGuid().ToString("N")[..12];
@@ -260,6 +298,26 @@ public sealed class ImageOptions
     /// <summary>Icon sizes embedded in an ICO file.</summary>
     public List<int> IcoSizes { get; set; } = [256, 128, 64, 48, 32, 16];
 
+    /// <summary>The playback speeds the preset editor offers (<see cref="AnimationSpeed"/>).</summary>
+    public static readonly double[] AnimationSpeeds = [0.25, 0.5, 0.75, 1, 1.5, 2, 4];
+
+    /// <summary>
+    /// Plays an animation (GIF, WebP, APNG, MNG; video → GIF or APNG) this many times as fast: 2 halves every frame
+    /// delay, 0.5 doubles it. 1 (the default, also for presets saved before the option) leaves the timing as it is.
+    /// </summary>
+    public double AnimationSpeed { get; set; } = 1;
+
+    /// <summary>
+    /// <see cref="AnimationSpeed"/> as the engines use it: between 0.1 and 10, and 1 for a value that makes no sense
+    /// (zero, negative; a hand-edited preset file).
+    /// </summary>
+    [JsonIgnore]
+    public double PlaybackSpeed => double.IsFinite(AnimationSpeed) && AnimationSpeed > 0 ? Math.Clamp(AnimationSpeed, 0.1, 10) : 1;
+
+    /// <summary>True when animations are played faster or slower than they were made (<see cref="PlaybackSpeed"/>).</summary>
+    [JsonIgnore]
+    public bool ChangesSpeed => PlaybackSpeed != 1;
+
     public ImageOptions Clone()
     {
         var copy = (ImageOptions)MemberwiseClone();
@@ -275,6 +333,22 @@ public enum PdfPageSize
     FitImage,
     A4,
     Letter,
+}
+
+/// <summary>
+/// How hard a PDF → PDF conversion shrinks the file: pictures are scaled down to the level's resolution and saved as
+/// JPEG at its quality, the rest is compressed losslessly. Text, fonts and drawings stay as they are.
+/// </summary>
+public enum PdfCompression
+{
+    /// <summary>Pages are copied as they are.</summary>
+    None,
+    /// <summary>Smallest: pictures at 72 dpi (reading on screen).</summary>
+    Screen,
+    /// <summary>Balanced: pictures at 150 dpi (e-mail, uploads).</summary>
+    Ebook,
+    /// <summary>High quality: pictures at 300 dpi (printing).</summary>
+    Print,
 }
 
 /// <summary>PDF related options.</summary>
@@ -312,6 +386,19 @@ public sealed class PdfOptions
     /// </summary>
     public bool SplitTallImage { get; set; }
 
+    /// <summary>
+    /// For PDF → PDF: make the file smaller (also with a page range or one file per page). A level from a newer Filee
+    /// reads as <see cref="PdfCompression.None"/>.
+    /// </summary>
+    [JsonConverter(typeof(LenientEnumJsonConverter<PdfCompression>))]
+    public PdfCompression Compression { get; set; }
+
+    /// <summary>
+    /// With <see cref="Compression"/>: also let Ghostscript rewrite the PDF when it is installed, and keep whichever
+    /// result is smaller. Off by default: it rewrites the whole file (fonts, structure), not only the pictures.
+    /// </summary>
+    public bool CompressWithGhostscript { get; set; }
+
     public PdfOptions Clone() => (PdfOptions)MemberwiseClone();
 }
 
@@ -320,6 +407,11 @@ public sealed class DocumentOptions
 {
     /// <summary>Export PDF/A (archival) when producing PDF from documents.</summary>
     public bool PdfA { get; set; }
+
+    /// <summary>
+    /// Markdown output: the text only, without the document's pictures (no "&lt;name&gt;_files" folder next to it).
+    /// </summary>
+    public bool LeaveOutPictures { get; set; }
 
     public DocumentOptions Clone() => (DocumentOptions)MemberwiseClone();
 }
@@ -378,6 +470,49 @@ public sealed class MediaOptions
     /// a target in the source's own format.
     /// </summary>
     public bool CopyAudio { get; set; }
+    /// <summary>
+    /// Encode H.264 and HEVC video with the graphics chip's encoder (NVENC, Quick Sync, AMF, VideoToolbox or VA-API)
+    /// when one works on this computer, else with x264 / x265 as usual. Much faster and lighter on power, a little
+    /// larger at the same quality. Off by default (and for presets saved before it existed), so results never change
+    /// without the user asking for it.
+    /// </summary>
+    public bool HardwareEncoding { get; set; }
+
+    /// <summary>Picture formats a video's frames can be saved as (<see cref="SaveEveryFrame"/>).</summary>
+    public static readonly IReadOnlyList<string> FrameTargets = ["png", "jpg"];
+
+    /// <summary>
+    /// Video → PNG or JPG: save every frame as a picture, in a folder, instead of one still frame. Only for video
+    /// sources and a target in <see cref="FrameTargets"/> (<see cref="Preset.SavesFramesOf"/>).
+    /// </summary>
+    public bool SaveEveryFrame { get; set; }
+
+    /// <summary>Formats a Live / Motion Photo video can be taken into (<see cref="ExtractMotionPhoto"/>).</summary>
+    public static readonly IReadOnlyList<string> MotionPhotoTargets = ["mp4", "mov"];
+
+    /// <summary>
+    /// Photos that can hold a video (<see cref="ExtractMotionPhoto"/>): Android Motion Photos (JPEG with the video
+    /// appended, HEIC / AVIF with an <c>mpvd</c> box), iPhone Live Photos (a JPEG or HEIC with its MOV next to it) and
+    /// LIVP packages.
+    /// </summary>
+    public static readonly IReadOnlyList<string> MotionPhotoSources = ["jpg", "heic", "avif", "livp"];
+
+    /// <summary>
+    /// MP4 / MOV: a Live / Motion Photo becomes its video (with sound) instead of a video of the still picture. Only
+    /// for sources in <see cref="MotionPhotoSources"/> (<see cref="Preset.ExtractsMotionOf"/>); a photo without a video
+    /// fails with <c>error.no_motion_photo</c>.
+    /// </summary>
+    public bool ExtractMotionPhoto { get; set; }
+
+    /// <summary>With <see cref="SaveEveryFrame"/>: extract every Nth frame (1 = every frame).</summary>
+    public int FrameInterval { get; set; } = 1;
+
+    /// <summary>
+    /// Most pictures one video may become (<see cref="SaveEveryFrame"/>): about an hour at 30 fps, already more than
+    /// anyone looks through. A longer video needs a larger <see cref="FrameInterval"/>.
+    /// </summary>
+    public const long MaxFrames = 100_000;
+
 
     public MediaOptions Clone() => (MediaOptions)MemberwiseClone();
 }
@@ -424,6 +559,20 @@ public static class MediaCodecs
     /// <summary>The codec <paramref name="target"/> is written with: the chosen one if the target takes it, else Default.</summary>
     public static VideoCodec Effective(string target, VideoCodec codec) =>
         VideoCodecsFor(target).Contains(codec) ? codec : VideoCodec.Default;
+
+    /// <summary>Video targets whose usual codec is H.264 (the others have their container's own: VP9, MPEG-2, …).</summary>
+    public static IReadOnlySet<string> H264Targets { get; } = new HashSet<string> { "mp4", "m4v", "mov", "mkv", "flv", "ts", "m2ts", "3gp", "3g2" };
+
+    /// <summary>
+    /// True when <paramref name="target"/> with <paramref name="codec"/> is written as H.264 or HEVC, the codecs
+    /// <see cref="MediaOptions.HardwareEncoding"/> applies to.
+    /// </summary>
+    public static bool TakesHardwareEncoding(string target, VideoCodec codec) => Effective(target, codec) switch
+    {
+        VideoCodec.Hevc => true,
+        VideoCodec.Default => H264Targets.Contains(target),
+        _ => false,
+    };
 
     /// <summary>The codec <paramref name="target"/> is written with: the chosen one if the target takes it, else Default.</summary>
     public static AudioCodec Effective(string target, AudioCodec codec) =>

@@ -23,10 +23,25 @@ namespace Filee.Core.Conversion;
 /// vectors, but a photo that became a PDF would only come back as a picture inside an SVG, so images are traced.
 /// </param>
 /// <param name="DirectOnly">
-/// Mandarina (the same flag as Filee's feature/pdf-to-pptx branch): the edge is a route of its own only. The file
-/// being converted is a <paramref name="From"/> file and <paramref name="To"/> is what the user asked for. PDF → PPTX
-/// puts pictures of the pages on slides, and PDF → DOCX through Word's reflow is slow: neither may be a step of a
-/// longer route (a Word document rendered to PDF must not become pictures on slides).
+/// The edge is a route of its own only: the file being converted is a <paramref name="From"/> file and
+/// <paramref name="To"/> is what the user asked for. PDF → PPTX puts pictures of the pages on slides; a Word document
+/// rendered to PDF must not become pictures on slides, and a picture deck must not be a step towards ODP or PPSX.
+/// </param>
+/// <param name="FrameSequence">
+/// The edge writes every frame of a video as numbered pictures into a folder (<see cref="Presets.MediaOptions.SaveEveryFrame"/>).
+/// It is never part of an ordinary route (a video → JPG stays one still frame), and with
+/// <see cref="RoutePlanner.Plan(string, string, bool, bool, bool)"/> asking for frames it is the whole route.
+/// </param>
+/// <param name="Unshaped">
+/// The engine draws text one character after the other, left to right, without complex-script shaping (no joined
+/// Arabic letters, no right-to-left order, no reordered vowel signs, conjuncts or placed marks). A source whose text
+/// needs shaping is never routed through the edge: <see cref="JobQueue"/> asks the engine
+/// (<see cref="ITextShapingCheck"/>) and plans again without it.
+/// </param>
+/// <param name="MotionPhoto">
+/// The edge takes the video out of a Live / Motion Photo (<see cref="Presets.MediaOptions.ExtractMotionPhoto"/>). It is
+/// never part of an ordinary route (a photo → MP4 is otherwise a video of the still picture), and with
+/// <see cref="RoutePlanner.Plan(string, string, bool, bool, bool)"/> asking for it it is the whole route.
 /// </param>
 /// <param name="FirstStepOnly">
 /// Mandarina: the edge is used only for the file the user dropped, never after another step: its <paramref name="From"/>
@@ -35,8 +50,23 @@ namespace Filee.Core.Conversion;
 /// Word or PowerPoint just because that is the cheapest way to a PDF when nothing else is installed.
 /// </param>
 public readonly record struct ConversionEdge(
-    string From, string To, int Cost = 10, bool ImageSourcesOnly = false, bool NotForImageSources = false, bool DirectOnly = false,
-    bool FirstStepOnly = false);
+    string From, string To, int Cost = 10, bool ImageSourcesOnly = false, bool NotForImageSources = false,
+    bool DirectOnly = false, bool FrameSequence = false, bool Unshaped = false, bool MotionPhoto = false,
+    bool FirstStepOnly = false); // Mandarina: FirstStepOnly
+
+/// <summary>
+/// A conversion an engine refuses with a reason the user can act on, shown in their language (the file's
+/// <see cref="FileResult.ErrorKey"/>) instead of "The engine reported an error".
+/// </summary>
+/// <param name="errorKey">Localization key of the reason, e.g. <c>error.too_many_frames</c>.</param>
+/// <param name="detail">Non-localized detail shown after it in brackets (numbers, a name), or null.</param>
+public sealed class ConversionRefusedException(string errorKey, string? detail = null)
+    : Exception(detail is null ? errorKey : $"{errorKey} ({detail})")
+{
+    public string ErrorKey { get; } = errorKey;
+
+    public string? Detail { get; } = detail;
+}
 
 /// <summary>Whether an engine can currently be used.</summary>
 /// <param name="IsAvailable">True if conversions can run.</param>
@@ -71,13 +101,28 @@ public interface IOutputAllocator
 /// <param name="Preset">Options chosen by the user.</param>
 /// <param name="Output">Where to write results.</param>
 /// <param name="WorkDirectory">Private scratch directory for this job; deleted afterwards.</param>
+/// <param name="FrameSequence">
+/// The step takes a <see cref="ConversionEdge.FrameSequence"/> edge: every frame of the video becomes a picture of
+/// format <paramref name="To"/> in one output folder.
+/// </param>
+/// <param name="Notice">
+/// Records a note on a step that worked, as a localization key (e.g. <c>notice.pdf_not_smaller</c>): shown with the
+/// file's result. Null when nobody listens.
+/// </param>
+/// <param name="MotionPhoto">
+/// The step takes a <see cref="ConversionEdge.MotionPhoto"/> edge: the video of the Live / Motion Photo becomes the
+/// output, not its still picture.
+/// </param>
 public sealed record ConversionStep(
     string InputPath,
     string From,
     string To,
     Preset Preset,
     IOutputAllocator Output,
-    string WorkDirectory);
+    string WorkDirectory,
+    bool FrameSequence = false,
+    Action<string>? Notice = null,
+    bool MotionPhoto = false);
 
 /// <summary>
 /// A conversion engine (ImageMagick, LibreOffice, rhwp, ...).
@@ -117,6 +162,20 @@ public interface IImageTransformer
 {
     /// <summary>True if converting <paramref name="from"/> → <paramref name="to"/> applies the rotation and flip.</summary>
     bool Transforms(string from, string to);
+}
+
+/// <summary>
+/// An engine with <see cref="ConversionEdge.Unshaped"/> edges: tells whether a source file has text that needs
+/// complex-script shaping (Arabic, Hebrew, the Indic scripts, Thai, ...), which those edges would draw broken.
+/// </summary>
+public interface ITextShapingCheck
+{
+    /// <summary>
+    /// The name of the first script in the text of <paramref name="sourcePath"/> that needs shaping (e.g. "Gujarati"),
+    /// or null. Quick: it scans the file's text, it doesn't convert it.
+    /// </summary>
+    /// <param name="sourceFormat">Format id of the file.</param>
+    string? ScriptNeedingShaping(string sourcePath, string sourceFormat);
 }
 
 /// <summary>Merges several PDF files into one. Implemented by the PDF engine.</summary>

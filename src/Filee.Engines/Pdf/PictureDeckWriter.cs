@@ -1,5 +1,3 @@
-// Mandarina: taken as it is from Filee's branch feature/pdf-to-pptx (commit e52db60, MIT), which is not in upstream/main yet.
-// When upstream merges it, `git merge upstream/main` should find the same text; keep upstream's version then.
 // Writes a PowerPoint presentation (PPTX, PresentationML / ECMA-376) whose slides each show one picture, fitted and
 // centred, with optional speaker notes: the package PDF → PPTX needs. Written by hand like the DOCX writer (the Open XML
 // SDK is only used by the tests, which validate the output with it), as small as PowerPoint, LibreOffice Impress and

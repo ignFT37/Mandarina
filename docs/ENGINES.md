@@ -5,38 +5,53 @@ Filee chooses engines automatically. Settings → *Engines* shows their status, 
 
 | Engine | How it gets there | Handles |
 |---|---|---|
-| ImageMagick (Magick.NET) | built in (library) | JPG, PNG, WEBP, TIFF, BMP, GIF, ICO, AVIF, JPEG XL, JPEG 2000, PSD/PSB, TGA, PPM, MNG, QOI, DDS, PCX, CUR, XPM, XBM, WBMP, PAM, PFM, SGI, Sun Raster, MIFF ↔ each other, and **APNG** (Filee's own reader and writer); HEIC (written with FFmpeg), XCF, camera RAW (LibRaw), DICOM (uncompressed ones by Filee's own reader), Photo CD, OpenEXR, Radiance HDR and EMF/WMF (Windows) read |
+| ImageMagick (Magick.NET) | built in (library) | JPG, PNG, WEBP, TIFF, BMP, GIF, ICO, AVIF, JPEG XL, JPEG 2000, PSD/PSB, TGA, PPM, MNG, QOI, DDS, PCX, CUR, XPM, XBM, WBMP, PAM, PFM, SGI, Sun Raster, MIFF ↔ each other, and **APNG** (Filee's own reader and writer); HEIC (written with FFmpeg), XCF, camera RAW (LibRaw), DICOM (uncompressed ones by Filee's own reader), Photo CD, OpenEXR, Radiance HDR, EMF/WMF (Windows) and the photo of an iPhone LIVP read |
+| Windows Imaging Component | part of Windows (Windows only) | **JPEG XR** (JXR, WDP, HDP; HDR screenshots of Windows) → the images ImageMagick writes, and PDF, ICNS, HEIC and SVG through PNG; HDR tone-mapped to SDR |
 | Vector graphics | built in (Svg.Skia, SkiaSharp, ACadSharp) | **SVG/SVGZ → PDF (vector) and images**, SVG ↔ SVGZ, **SVG → DXF** (→ DWG with the CAD engine), **raster images → SVG (tracing)**, PDF-compatible AI → PDF |
 | ICNS | built in | images → ICNS (16–1024 px), ICNS → images |
-| PDFsharp | built in (library) | images → PDF, merge, split, page ranges |
+| PDFsharp | built in (library) | images → PDF, merge, split, page ranges, **compression** (smaller PDFs, see below) |
 | PDFium | built in (library) | PDF → images (multi-page TIFF/GIF supported) |
-| Unhwp | built in (library) | HWP/HWPX → TXT, Markdown, HTML |
+| Unhwp | built in (library) | HWP/HWPX → TXT, Markdown, HTML (pictures in a `<name>_files` folder next to the Markdown, embedded in the HTML) |
 | Markdown (Markdig) | built in (library) | **Markdown → HTML, TXT** (and → PDF / DOCX through the HWPX writer, rhwp or LibreOffice) |
 | Spreadsheets (ExcelDataReader for XLS) | built in (library) | **XLSX, XLS, ODS, CSV, TSV → XLSX, ODS, CSV, TSV** (one CSV / TSV per sheet) |
-| Office Open XML | built in | **DOCM / DOTX / DOTM ↔ DOCX, XLSM / XLTX ↔ XLSX, PPTM / POTX / PPSX ↔ PPTX** (macros removed for macro-free types) |
+| Office Open XML | built in | **DOCM / DOTX / DOTM ↔ DOCX, XLSM / XLTX ↔ XLSX, PPTM / POTX / POTM / PPSX ↔ PPTX** (macros removed for macro-free types) |
 | Fonts | built in | **TTF, OTF, WOFF, WOFF2, EOT ↔ each other**; CFF (PostScript) outlines become TrueType for TTF and EOT |
-| **HWPX writer** | built in | **DOCX (+ DOCM/DOTX/DOTM), XLSX (+ XLSM/XLTX), XLS, ODS, CSV, TSV, PPTX (+ PPTM/POTX/PPSX), PDF, HTML, EPUB, MOBI/AZW3, FB2, HWPX, TXT, Markdown → HWPX** (and with rhwp → PDF and images); ODT, RTF, reStructuredText, LaTeX → HWPX with Pandoc |
-| **DOCX writer** | built in | **HWPX (and HWP through rhwp), PDF, HTML, EPUB, MOBI/AZW3, FB2, Markdown, TXT, XLSX, XLS, ODS, CSV, PPTX (+ variants) → DOCX** |
-| PDF text | built in (PdfPig) | **PDF → TXT** (reading order, also two columns; no OCR) |
+| **HWPX writer** | built in | **DOCX (+ DOCM/DOTX/DOTM), XLSX (+ XLSM/XLTX), XLS, ODS, CSV, TSV, PPTX (+ PPTM/POTX/POTM/PPSX), PDF, OFD, HTML, MHTML, EPUB, MOBI/AZW3, FB2, HWPX, TXT, Markdown → HWPX** (and with rhwp → PDF and images); ODT, RTF, reStructuredText, LaTeX → HWPX with Pandoc |
+| **DOCX writer** | built in | **HWPX (and HWP through rhwp), PDF, OFD, HTML, MHTML, EPUB, MOBI/AZW3, FB2, Markdown, TXT, XLSX, XLS, ODS, CSV, PPTX (+ variants) → DOCX** |
+| PDF text | built in (PdfPig) | **PDF → TXT, Markdown** (reading order, also two columns; Markdown keeps headings, emphasis, links and the pictures; no OCR) |
 | PDF slides | built in (PDFium, PdfPig) | **PDF → PPTX**: a picture of each page on its own slide (looks like the PDF, not editable), the page's text in the speaker notes |
-| E-mail | built in (MimeKit, MsgReader) | **EML, Outlook MSG → HTML** (headers + body, inline pictures), **TXT**, **ZIP** (the attachments); **MSG → EML** |
+| E-mail | built in (MimeKit, MsgReader) | **EML, Outlook MSG → HTML** (headers + body, inline pictures), **TXT**, **ZIP** (the attachments); **MSG → EML**; **MHTML → HTML** (the saved page in one file, pictures inlined; on to PDF, DOCX, HWPX, TXT, Markdown, EPUB from there) |
 | Data | built in (System.Text.Json, YamlDotNet, Tomlyn, System.Xml) | **JSON, JSON Lines, YAML, TOML, XML, CSV ↔ each other** (CSV for tables); **vCard ↔ CSV**; spreadsheets and contacts reach JSON / YAML / TOML / XML through CSV |
 | **E-books** | built in | **EPUB, MOBI/AZW/AZW3/PRC, FB2, HTMLZ, TXTZ → EPUB, HWPX (→ PDF), TXT, HTML, Markdown, FB2, HTMLZ, TXTZ**; HTML, Markdown, TXT, DOCX → EPUB/FB2/HTMLZ/TXTZ; HTML → TXT; comics CBZ/CBR/CB7/CBT/CBC → PDF, EPUB, CBZ; PDF → CBZ; AZW4 → PDF; **EPUB ↔ KEPUB** (Kobo) |
 | CAD (ACadSharp + built-in renderer) | built in (library) | **DWG ↔ DXF**; DWG/DXF → **PDF** (vector), **SVG**, PNG, JPG, WEBP, TIFF, BMP, GIF, ICO, AVIF |
 | **Subtitles** | built in | **SRT, ASS/SSA, WebVTT, SAMI (SMI), LRC, TTML, MicroDVD, SCC → SRT, ASS, WebVTT, SAMI, LRC, TTML, MicroDVD**, always UTF-8 (Korean CP949 / EUC-KR files read correctly) |
-| 3D models (SharpGLTF for glTF) | built in (library) | **GLB, glTF, STL, OBJ (+ MTL), 3MF, PLY ↔ each other**; → PNG, JPG, … (an isometric preview) |
-| rhwp | bundled with the installer (`engines/rhwp`) | HWP/HWPX → PDF, **HWP → HWPX, HWPX → HWP** |
+| 3D models (SharpGLTF for glTF) | built in (library) | **GLB, glTF, STL, OBJ (+ MTL), 3MF, PLY ↔ each other**; FBX → each of them; → PNG, JPG, … (an isometric preview) |
+| **Geospatial vector data** | built in | **GeoJSON, KML, KMZ, GPX, Shapefile ↔ each other and CSV** (longitude / latitude or WKT); projected Shapefiles (UTM, Web Mercator, Lambert, Albers) are converted to WGS 84; through CSV to XLSX, JSON, … (see below) |
+| rhwp | bundled with the installer (`engines/rhwp`, with the Microsoft C++ runtime, see below) | HWP/HWPX → PDF, **HWP → HWPX, HWPX → HWP** |
 | Archives (7-Zip) | bundled with the installer (`engines/7zip`, ~2.5 MB) + built-in readers | ZIP, 7Z, RAR, TAR (+ GZ/BZ2/XZ/Z/7Z/LZ), CAB, ISO, DMG, … **→ folder, ZIP, 7Z, TAR, TAR.GZ/BZ2/XZ**; ALZ, EGG, lzip read in-process; "Compress into one archive" for any files |
 | LibreOffice + H2Orestart + Java | **optional download** (~420 MB, 1.3 GB on disk) | older and rare formats only: DOC, XLS, PPT, RTF and OpenDocument → PDF and to each other, output as DOCX/ODT/ODS/ODP; HWP/HWPX → DOCX/ODT; read-only formats (see below) → PDF and their kind's editable formats; FODT, OpenDocument templates (OTT, OTS, OTP) and XLT out; SVG → EMF/WMF/ODG, a PDF page → SVG |
 | Microsoft Office (Mandarina) | **the Office installed on the PC**, driven through COM (Word, Excel, PowerPoint): optional, with its own switch | DOC, DOCX, RTF, ODT → PDF; PPT, PPTX, ODP → PDF; XLS, XLSX, ODS → PDF; DOC ↔ DOCX, PPT ↔ PPTX, XLS ↔ XLSX; PDF → DOCX with Word's reflow. Only for files that are Word, Excel or PowerPoint documents; see docs/mandarina/OFFICE.md |
 | Pandoc | **optional download** (~42 MB, 240 MB on disk) | Markdown ↔ DOCX/ODT/RTF, DOCX/ODT/HTML/RTF → Markdown, HTML ↔ DOCX/ODT, markup languages (reStructuredText, LaTeX, Org, AsciiDoc, Typst, MediaWiki, DocBook, Jupyter, Textile, man, OPML) ↔ Markdown/HTML/DOCX/ODT and each other (and → RTF, EPUB, TXT), Markdown and markup → PPTX slides |
-| Ghostscript | **optional download** (~20 MB, 31 MB on disk) | EPS/PS → PDF, PDF → EPS/PS, PostScript-based AI → PDF (images through PDF and PDFium) |
-| FFmpeg | **optional download** (~100 MB, 272 MB on disk) | **all video and audio**: video ↔ video (H.264, HEVC, AV1), video → animated GIF / APNG or a still frame, audio and subtitle extraction, audio ↔ audio (also APE, WavPack, TTA, DSD, DTS, ALAC, …), GIF, APNG and photos → MP4/WEBM/MOV, images → HEIC |
-| Calibre | **optional download** (~216 MB, 660 MB on disk) | rare e-book formats: LIT, LRF, CHM, PDB, PML, RB, SNB, TCR, OEB → EPUB; EPUB → MOBI, AZW3, LIT, LRF, PDB, PML, RB, SNB, TCR |
+| Ghostscript | **optional download** (~20 MB, 31 MB on disk) | EPS/PS → PDF, PDF → EPS/PS, PostScript-based AI → PDF (images through PDF and PDFium); smaller PDFs when a preset asks for it |
+| FFmpeg | **optional download** (~100 MB, 272 MB on disk) | **all video and audio**: video ↔ video (H.264, HEVC, AV1), video → animated GIF / APNG, a still frame or every frame, audio and subtitle extraction, audio ↔ audio (also APE, WavPack, TTA, DSD, DTS, ALAC, …), GIF, APNG and photos → MP4/WEBM/MOV, Live / Motion Photos → their video, images → HEIC |
+| Calibre | **optional download** (~216 MB, 660 MB on disk) | rare e-book formats: LIT, LRF, CHM, PDB, PML, RB, SNB, TCR, OEB → EPUB; EPUB → MOBI, AZW3, LIT, LRF, PDB, PML, RB, SNB, TCR; e-books → PDF (ranked above the HWPX writer, see below) |
 
 DOCX, XLSX, XLS, ODS and PPTX → PDF need neither Microsoft Office nor LibreOffice: they are read in-process, written as HWPX
 and rendered by rhwp. Anything the built-in readers understand (including PDF) is written as DOCX by the DOCX writer.
 LibreOffice's and Pandoc's costs are set so the built-in route always wins where one exists.
+
+Except for text that needs shaping. rhwp draws one glyph per character from left to right without OpenType shaping,
+so Arabic and Hebrew come out unjoined and in the wrong order, and Indic vowel signs and conjuncts as separate glyphs
+with dotted circles (#185 Gujarati, #202 Arabic). Its PDF edges are marked `Unshaped`, and rhwp tells
+(`ITextShapingCheck`) whether a source has such text: `Infrastructure/ComplexScripts.cs` scans the text parts of the
+file without reading it into the document model (DOCX `word/document.xml`, headers, footers and notes, PPTX slides,
+XLSX shared strings and sheets, HWPX sections, OFD pages and templates, EPUB chapters, or a text file with its HTML /
+RTF character references) for the Hebrew, Arabic, Syriac, Thaana, N'Ko, Indic, Sinhala, Thai, Lao, Tibetan, Myanmar,
+Khmer, Mongolian and other South / Southeast Asian blocks. For such a file `JobQueue` plans again without unshaped
+edges: DOCX, TXT, Markdown, HTML, XLSX, PPTX and HWPX → PDF (and → images through PDF) go through LibreOffice even
+when Settings → *Engines* doesn't choose it for documents. Without LibreOffice the file fails with "This script needs
+LibreOffice to convert correctly" and the script's name instead of becoming a broken PDF. Latin, Greek, Cyrillic, CJK
+and Korean documents keep the built-in route; a binary HWP is not scanned and stays with rhwp.
 
 All built-in document readers are registered in one place, `Hwp/Hwpx/DocumentReaders.cs` (format id → reader, and
 which formats need Pandoc). The HWPX writer and the DOCX writer take their input formats from it: adding a reader
@@ -82,16 +97,71 @@ they can be installed or removed later in Settings → *Engines*. A conversion t
   uses them, only the TRANSCRIBE and SUBTITLES tools (`src/Filee.App/Mandarina/Tools/WhisperEngine.cs`, which picks the model
   with `WhisperModels.For`).
 
+### Microsoft C++ runtime (Windows)
+
+Programs built with Visual C++ import `MSVCP140.dll` / `VCRUNTIME140.dll`, which a fresh Windows does not have (they
+come with the Visual C++ Redistributable). Windows looks for a program's DLLs in its own folder first, so Filee puts
+the runtime next to every program that needs it and does not ship it (`Infrastructure/AppLocalRuntime.cs`):
+
+| Binary | Runtime |
+|---|---|
+| `engines/rhwp/rhwp.exe` (bundled) | `vcruntime` component copied next to it by `fetch-engines.ps1` (#248) |
+| `unhwp.dll` (NuGet, loaded into Filee.exe and filee-cli.exe) | `vcruntime` component copied next to `Filee.exe` (`build-installer.ps1` → `fetch-engines.ps1 -RuntimeTo`) |
+| Ghostscript (download) | `vcruntime` component copied next to `gswin64c.exe` (`EngineInstaller`, `fetch-engines.ps1`) |
+| LibreOffice (download) | its own copy, which the administrative install leaves in `System64`, copied into `program/` (`EngineInstaller`, `fetch-engines.ps1`; `LibreOfficeConverter` also repairs a copy installed by an earlier Filee) |
+| calibre, Java (downloads) | ship their own next to their programs (`app/bin`, `bin`) |
+| 7-Zip, FFmpeg (GyanD), Pandoc, PDFium, SkiaSharp / HarfBuzz, Magick.Native, the Explorer menu DLL, .NET | import neither (static runtime or MinGW / GHC builds) |
+
+The installer and the portable zip are made from the same publish folder, so both have the DLLs. Filee installed in
+Program Files cannot repair its own bundled files, so an older installation gets them by installing the new version.
+When a DLL is still missing, Windows does not start the program and reports `0xC0000135` (STATUS_DLL_NOT_FOUND;
+`0xC0000139` for an outdated one) as its exit code: `ProcessRunner` and `FfmpegRunner` turn that into
+`error.runtime_missing` ("A Microsoft Visual C++ runtime file this engine needs is missing or outdated …", with the
+program and the code in brackets) instead of the raw exit code, and `UnhwpConverter` does the same when `unhwp.dll`
+cannot be loaded. To check binaries after an engine update, list the DLLs each `.exe` / `.dll` imports (its PE import
+table, e.g. `dumpbin /dependents`) and look for `MSVCP140*.dll`, `VCRUNTIME140*.dll` or `CONCRT140.dll`.
+
 To bump a version, change `url`, `sha256` and `size` in engines.json together, run
-`pwsh build/fetch-engines.ps1`, test, and update `THIRD-PARTY-NOTICES.md`. When the LibreOffice team retires a
-version from `download.documentfoundation.org/libreoffice/stable/`, its URL stops working: keep the pinned version
-current.
+`pwsh build/fetch-engines.ps1`, test, and update `THIRD-PARTY-NOTICES.md`. For rhwp, also update `RHWP_VERSION`,
+`RHWP_COMMIT` and `RUST_TOOLCHAIN` in `build/build-linux-native.py` (see below); CI fails until they match. When the
+LibreOffice team retires a version from `download.documentfoundation.org/libreoffice/stable/`, its URL stops working:
+keep the pinned version current.
+
+## Linux builds for older glibc
+
+Linux packages run on Ubuntu 22.04 (glibc 2.35). rhwp's Linux release is linked on Ubuntu 24.04 (needs glibc 2.39).
+The `linux-native` job of `.github/workflows/portable.yml` builds it from its pinned, unmodified source on Ubuntu 22.04
+(x64 and arm64) with `build/build-linux-native.py`:
+
+- `rhwp`: `cargo build --release --locked --bin rhwp` at the tag's commit with its pinned Rust toolchain, in the
+  layout of rhwp's release archive.
+- `check` (also run on its own): fails when engines.json pins another rhwp version than the script builds.
+
+The Linux package jobs pass the result to `build/build-portable.ps1 -RhwpOverride <dir>`. Local builds without it use
+the downloaded rhwp (fine on the machine that builds it). SharpHook's native libraries are packaged as they come
+from NuGet: SharpHook 8.0.0 built its X11 back ends against glibc 2.38, 8.0.1 needs glibc 2.34 at most again.
+
+`build/check-elf-glibc.py` lists the newest GLIBC version every ELF file in the package needs and fails above 2.35,
+and the packages are unpacked and started on Ubuntu 22.04 (`build/smoke-portable.ps1`: CLI, rhwp conversions, loading
+the X11 input hook back end; `build/smoke-launch-app.py`: the app under Xvfb). If a SharpHook or engine update fails
+these checks, keep the previous version until upstream builds for an older glibc again, or build the binary from its
+pinned source in `build/build-linux-native.py` like rhwp (PR #113 did this for SharpHook 8.0.0's libuiohook back ends).
 
 ## Images and vector graphics
 
 - **Animations.** An animated GIF, WebP, APNG or MNG keeps every frame and its timing when converted to one of these
   (animated GIF ↔ animated WebP ↔ APNG ↔ MNG, WebP lossy or lossless as the preset says) and becomes a multi-page TIFF;
   other targets get the first frame. Multi-page TIFFs and PDFs stay one image per page in WebP.
+- **Playback speed** (preset option *Playback speed*, `ImageOptions.AnimationSpeed`: 0.25×, 0.5×, 0.75×, 1×, 1.5×,
+  2×, 4×; shown for GIF, WebP, APNG, MNG and "same as source") rewrites the frame delays of an animation that stays
+  animated (`Magick/AnimationTiming.cs`). Delays are divided by the speed in the target's own units (hundredths of a
+  second for GIF and MNG, milliseconds for WebP and APNG) and rounded on the running total, so the whole animation
+  keeps its new length. Players show a frame of 10 ms or less for 100 ms, so no delay goes below 20 ms (50 frames a
+  second): a frame that would start sooner than that after the one before is dropped and its time goes to that one,
+  which leaves frames out evenly. Source delays of 10 ms or less count as the 100 ms players show. Loop count and
+  disposal stay; 1× (also every preset saved before the option) leaves the timing untouched. Video → GIF / APNG
+  (FFmpeg) puts `setpts=PTS/<speed>` before the `fps` filter, so the frame rate limits stay. The speed changes only in
+  the step that writes the output (`JobQueue`), never twice on a longer route.
 - **APNG** (`Magick/Apng.cs`) is Filee's own code, written from the APNG specification: ImageMagick reads only an
   APNG's default image and writes APNG through an external FFmpeg. Every frame is an ordinary PNG decoded or encoded by
   ImageMagick; Filee handles the chunks around them.
@@ -119,6 +189,20 @@ current.
   (Q8) build without HDRI, so high-dynamic-range values are clipped to the displayable range and stored with 8 bits per
   channel; there is no tone mapping. Writing EXR or HDR from 8-bit pictures would only make larger files, so they are
   not targets.
+- **JPEG XR** (`.jxr`, `.wdp`, `.hdp`, read only, Windows only; `Wic/`). ImageMagick has no JPEG XR coder in any build,
+  so the picture is decoded by Windows' own codec (WIC's JPEG XR decoder, in every Windows 10 and 11) and handed to
+  ImageMagick for the preset's options and the output format. Elsewhere the engine reports "not available on this
+  platform". 8- and 16-bit pictures are converted to 8-bit sRGB by WIC. Fixed-point and float ones are linear scRGB
+  (1.0 = SDR white at 80 nits), like the 64-bit half-float screenshots Windows saves on an HDR display (Xbox Game Bar,
+  Win + Alt + PrtScn, Snipping Tool), and are tone-mapped (`Wic/HdrToneMap.cs`) instead of clipped:
+  - the reference white is the luminance 99 % of the pixels stay below, between 1.0 and 4.0 (80–320 nits). Windows
+    draws SDR content at the display's "SDR content brightness", so the white of a desktop screenshot lands there and
+    its SDR parts come out as they were drawn; small highlights don't darken the picture;
+  - values up to 80 % of that white are kept; above, an extended Reinhard shoulder takes everything up to the brightest
+    pixel into the last 20 %, on the largest of R, G and B so colours keep their hue. A picture with nothing brighter
+    than white is left as it is;
+  - colours outside the sRGB gamut are clipped, then the sRGB transfer curve and 8 bits. An alpha channel that is
+    opaque everywhere (HDR screenshots have one) is dropped.
 - **DICOM** (`.dcm`, `.dicom`, read only). The Q8 build reads only 8-bit DICOM, while CT, MR and X-ray scanners store
   12 or 16 bits, so `Magick/Dicom.cs` (written from the DICOM standard, PS3.5 and PS3.3 C.7.6.3 / C.11.2) reads
   uncompressed files itself: implicit and explicit VR little endian, explicit VR big endian and deflated files, with or
@@ -135,6 +219,9 @@ current.
   without "maximize compatibility"). GIMP XCF layers are composited at their offsets with their blend modes; hidden
   layers are left out. ImageMagick reads 8-bit XCF without zlib tile compression (GIMP 2.10+ "better but slower
   compression" files give a clear error).
+- **LIVP** (an iPhone Live Photo as iCloud downloads it: a ZIP of the photo, HEIC or JPEG, and its MOV) is read as its
+  photo, taken out of the package in memory (`LivePhotoSource.ReadStill`, at most 64 MB); its video is FFmpeg's (see
+  Live / Motion Photos there).
 - **Camera RAW** (DNG, CR2, CR3, NEF, ARW, …, and `.raw`) is decoded by LibRaw with the camera's white balance,
   sRGB output and AHD demosaicing, then turned upright from the EXIF orientation.
 - **EMF/WMF** are rendered through GDI+ (Windows only) at the preset's render DPI (at least 150), keeping their
@@ -224,6 +311,7 @@ Readers turn the source into a small document model (`Hwp/Hwpx/HwpxModel.cs`) an
   - tables with merged cells, column widths, borders and shading from the table style and cells, repeated header rows;
   - pictures inline and floating, text boxes, rectangles/ellipses/lines with solid or gradient fills, groups;
   - footnotes, endnotes, bookmarks, hyperlinks (web and within the document, e.g. a table of contents);
+  - equations (Word's equation editor, Office Math) as 한글 equations, see *Equations* below;
   - Word's document grid ("lines"), which 한글 does not have, as an "at least" line spacing.
 - **XLSX, XLS, ODS, CSV and TSV** (`Office/Sheets`, see [Spreadsheets](#spreadsheets)): every visible sheet becomes a section with one table. Cells show what Excel
   shows (number formats via ExcelNumberFormat, dates, percentages, cached formula results), with fonts, fills,
@@ -241,7 +329,7 @@ Readers turn the source into a small document model (`Hwp/Hwpx/HwpxModel.cs`) an
 - **TXT** needs no reader (one paragraph per line; UTF-8, UTF-16 or the Korean code page CP949).
 - **Markdown** is parsed with Markdig (`MarkdownReader.cs`): headings, emphasis, code, lists (1. / a. / i. with
   start numbers), task lists, quotes, tables with spans, links, images, footnotes and math. No Pandoc needed.
-- **PDF** is read with PdfPig (see *PDF reader* below); DOCM / DOTX / DOTM, XLSM / XLTX and PPTM / POTX / PPSX
+- **PDF** is read with PdfPig (see *PDF reader* below); DOCM / DOTX / DOTM, XLSM / XLTX and PPTM / POTX / POTM / PPSX
   are read like DOCX, XLSX and PPTX.
 - **HTML** is parsed with AngleSharp (`HtmlReader.cs`, `HtmlCss.cs`): headings, paragraphs, bold / italic /
   underline / strike / sub / sup / code / mark, the basic inline CSS (colour, background, font weight, style and
@@ -250,6 +338,8 @@ Readers turn the source into a small document model (`Hwp/Hwpx/HwpxModel.cs`) an
   pictures are skipped), links and anchors, quotes, `pre`, `hr` and figures. Scripts, styles, forms and `nav` are
   skipped. The encoding comes from the BOM, the XML declaration or `<meta charset>`, else UTF-8 or the system
   code page. No Pandoc needed.
+- **MHTML** (`.mhtml`, `.mht`) is turned into its standalone page first (see *E-mail* below) and that page read like
+  HTML; it refers to nothing but data: URIs, so no file outside the job's scratch folder is looked at.
 - **ODT, RTF** are parsed by Pandoc into its JSON AST (`PandocAstReader.cs`, following
   [pypandoc-hwpx](https://github.com/msjang/pypandoc-hwpx)).
 - Markdown, HTML and Pandoc keep structure only, so page setup comes from the built-in template (A4).
@@ -266,7 +356,29 @@ Every generated file is checked in the tests with three independent readers: rhw
 text) and LibreOffice + H2Orestart (opens it), see `tests/Filee.Engines.Tests/DocxToHwpxTests.cs` and
 `OfficeTests.cs`.
 
-Not converted: Word charts, SmartArt, equations (kept as text), free-form shapes, tracked changes and comments.
+Not converted: Word charts, SmartArt, free-form shapes, tracked changes and comments.
+
+### Equations
+
+Word equations (`m:oMath`, `m:oMathPara`) become 한글 equation objects (`hp:equation`) with an equation script
+(`Hwp/Hwpx/Docx/OmmlReader.cs` reads them into a small math tree, `Hwp/Hwpx/EquationScript.cs` writes the script),
+so DOCX → HWPX and HWP keep editable equations and DOCX → PDF draws them with rhwp (#143):
+
+- fractions (`{a} over {b}`, also without bar or written linear `a/b`), sub- and superscripts and scripts before the
+  base, square roots and roots with an index, sums, products, unions and integrals with their limits, brackets that
+  grow (`LEFT ( … RIGHT )`), matrices (`pmatrix`, `bmatrix`, `dmatrix`), cases, equation arrays (`pile`), function
+  names and `lim` with what goes under it, accents (hat, bar, vec, dot, tilde …), over- and underlines;
+- Greek letters, operators and arrows as 한글's commands (`omega`, `TIMES`, `LEQ`, `INF`, `rarrow` …), upright text
+  (`m:sty="p"`, normal text) in `rm`, bold in `bold`; a display equation alone in its paragraph is centred;
+- variables are written letter by letter when they read like a command (`x _{i n}`, not `in` = ∈);
+- boxes, phantoms and group characters (braces above or below) keep only their content; other characters are
+  written as they are.
+
+The box an equation is stored with (`hp:sz`) is measured like rhwp lays the script out (estimated character
+widths, script scale 0.7, fraction and root spacing, from rhwp's `equation/layout.rs`): rhwp stretches an equation to
+its stored width, so a wrong box would distort it. 한글 lays the script out again when the equation is edited.
+The model's other writers (HTML, EPUB, Markdown, TXT …) write a linear form instead, `(a+b)/(2c)`, `x_i^2`, `√(x)`,
+which is also the equation's alternative text in HWPX.
 
 ## Spreadsheets
 
@@ -356,7 +468,7 @@ it. DOCX → DOCX is no edge; the Word variants are the Office Open XML engine's
 ## PDF reader
 
 `Pdf/PdfDocumentReader*.cs` reads PDFs with PdfPig (Apache-2.0) into the document model, for PDF → DOCX, HWPX and
-(with `PdfTextConverter`) TXT:
+(with `PdfTextConverter`) TXT and Markdown:
 
 - words with their positions, fonts, sizes and colours → lines → paragraphs: a line continues the paragraph above
   when it follows at about one line pitch, unless it starts with a bullet or number, is indented as a first line,
@@ -369,18 +481,214 @@ it. DOCX → DOCX is no edge; the Word variants are the Office Open XML engine's
   line's first word would have fitted keeps its line break;
 - reading order: gutters between columns are found where no narrow paragraph crosses; paragraphs that span the
   columns (titles, figures, closing text) split the page into bands, read column by column;
+- text that needs shaping (`PdfDocumentReader.ComplexText.cs`): an `/ActualText` of marked content replaces the
+  glyphs it covers on every page (LibreOffice writes one for each cluster whose glyphs don't map to its characters
+  one to one: conjuncts, vowel signs drawn before their consonant, ligatures). On a page with Arabic, Hebrew, Indic,
+  Thai, ... text, words are built from the glyphs in content-stream order instead of by position, because marks
+  have no width and overlap their letter: a mark joins the letter before it, a vowel sign drawn before its consonant
+  (Word's PDFs keep that visual order) joins the consonant after it, and the dotted circles of PDFs made by rhwp
+  (mapped to U+0002 or to a vowel sign, wider than any mark) are left out. Right-to-left words are read from the
+  right, with numbers and Latin words in them left to right, a line's words likewise; a paragraph of mostly
+  right-to-left lines is marked right to left (`HParaFormat.RightToLeft`), its alignment and indents measured from
+  the right, and DOCX gets `w:bidi` on it and `w:rtl` on its Arabic or Hebrew runs (HWPX has no right-to-left
+  paragraphs). Fonts keep their family names (`ArialUnicodeMS` → Arial Unicode MS, `NirmalaUI` → Nirmala UI,
+  `NotoSansGujarati` → Noto Sans Gujarati). Not recovered: a cluster drawn as one glyph whose ToUnicode entry is
+  wrong, in a PDF without ActualText (some Word PDFs), and the word spacing of rhwp's broken layouts;
 - headings from font sizes (short paragraphs clearly larger than the body text, the largest size is level 1), bold
   and italic from the fonts, colours, links from link annotations, alignment, indents, spacing and line pitch;
 - pictures: JPEG streams are kept as they are, others are decoded to PNG, and what PdfPig cannot decode is cut out
   of the rendered page; a picture covering the page behind text (the scan under an OCR layer) is skipped;
-- page size per page and margins shared by the document; running headers and footers that repeat on most pages
-  (and bare page numbers) are left out;
+- ruled tables (`PdfDocumentReader.Tables.cs`): tables drawn with lines become real tables in their place in the
+  reading order. The rules come from the page's vector paths: stroked straight lines and rectangle edges, and thin
+  filled rectangles (up to 4 pt, the way Word and many generators draw borders). Rules on one line (within 1.5 pt)
+  that overlap or leave a gap of at most 2.5 pt are joined; horizontal and vertical rules that meet or cross form a
+  grid, and grid lines closer than 3 pt are one edge. The edges give the columns and rows (the column widths and
+  minimum row heights of the result); where a rule covers less than half of the edge between two grid units, the
+  units are one merged cell (column and row spans). A table without side or bottom rules still reaches as far as
+  most of its rules do. Words go into the cell under their centre and are read like the rest of the page
+  (paragraphs, line breaks, alignment within the cell, fonts, sizes, bold / italic, colours); each cell gets the
+  borders that are drawn around it (weight, colour, dashed or solid), shading from a filled rectangle under it, and
+  a vertical alignment from where its text sits. Only clear tables are rebuilt: at least 2 rows and 2 columns,
+  every merged cell a rectangle, no rule through the middle of a word, and text in at least two cells. A box around
+  a note, underlines, separators and empty grids (a chart's frame) stay as they were. Not rebuilt: tables without
+  rules (aligned by white space only, or with only horizontal rules), nested tables (their text stays in the outer
+  cell), rotated pages; a table running over several pages becomes one table per page. PDF → TXT keeps the cell
+  text in reading order;
+- page size per page and margins shared by the document; what sits at the top or bottom edge only because it is a
+  page is left out: running headers and footers that repeat on most pages (digits ignored, so "Page 3" matches
+  "Page 4"), running heads that change with the chapter (the same text at the same height on three pages or more,
+  no larger than the body text, so a heading that starts several pages stays), bare page numbers ("12", "- 12 -",
+  "Page 3 of 10", "第 3 页", roman "iv") and the same picture (a logo) at the same place on most pages;
 - a page without text (a scan, a page of drawings, a turned page) becomes the rendered page (PDFium, 150 dpi JPEG)
   as a picture behind the text of an empty page, so nothing is lost; there is no OCR. PDF → TXT includes the
   invisible OCR text layer of scanned PDFs that have one.
 
-Password-protected PDFs fail with a clear message. Not converted: tables (their cells come out as paragraphs in
-reading order), vector drawings on text pages, form fields and annotations other than links.
+Password-protected PDFs fail with a clear message. Not converted: tables without rules (their cells come out as
+paragraphs in reading order), other vector drawings on text pages, form fields and annotations other than links.
+
+**PDF → Markdown** is one step (`PdfTextConverter`, a `DirectOnly` edge, so PDF → HTML, EPUB, ... never start going
+through a Markdown file): the document is written by `MarkdownWriter` as for e-books, with headings (`#`, not bold
+inside), bold / italic and links. Indents are the PDF's layout, not block quotes, and the PDF's information title
+(often a file name) gives no front matter. A Markdown file can't hold pictures, so `Text/MarkdownPictures.cs` writes
+them into a folder next to it, reserved through the output allocator like any output (`report.md` →
+`report_files/img0001.jpg`, `report_files (2)` when that folder is taken), and links them relatively, so editors
+show them and the pair can be moved together; JPEGs are the PDF's own, a scanned page is the picture of the page.
+The preset option *Leave out pictures* (`DocumentOptions.LeaveOutPictures`, Documents card, shown for Markdown)
+writes the text only, read like PDF → TXT (the invisible OCR layer of scans included) and without a folder. The same
+option applies to every Markdown writer: e-books (`EbookConverter`), HWP / HWPX (`UnhwpConverter`) and Pandoc (a
+Lua filter drops the pictures, figures keep their captions).
+
+## OFD reader
+
+OFD (GB/T 33190-2016) is China's fixed-layout format: fully digitalized e-invoices (数电票), contracts and official
+documents. `Ofd/OfdReader*.cs` reads it into the document model with no external engine, so OFD → DOCX and HWPX are
+one step, → PDF two (rhwp), and TXT, Markdown, HTML, EPUB follow from there. OFD is read only (`Writable: false`) and
+sits on the office donut (settings schema 27 teaches existing donuts `.ofd`).
+
+- **Package** (`Ofd/OfdPackage.cs`): OFD.xml → the first document (Document.xml) → its pages, template pages and
+  resource files (PublicRes, DocumentRes, a page's PageRes, and the unnamed `Res.xml` WPS writes next to them).
+  Parts are looked up by name inside the ZIP and never written out under their own names; references are resolved
+  against the referring part (or the package root for "/…"), "." and ".." applied, and anything that leaves the
+  package, a URL or a drive path finds nothing. XML is read without DTDs; a part may unpack to 64 MB, a picture to
+  32 MB (larger ones are left out), the whole package to 1 GB; at most 100,000 parts, 10,000 pages, 2,000,000
+  drawing objects, page blocks nested 32 deep. DeltaX / DeltaY "g n d" repeats never yield more values than the
+  text has characters.
+- **Encryption**: a package with an `Encryptions.xml` (GM/T 0099) or encryption entries in OFD.xml is refused with a
+  clear message; nothing is decrypted. Parts that are not XML (encrypted or damaged) fail the same way.
+- **Text**: TextObjects with their Boundary, CTM (scale, also of the font size), Size in millimetres, TextCode X / Y
+  (missing ones continue where the previous code ended) and DeltaX advances; DeltaY alone moving the characters is
+  vertical text. A DeltaX list shorter than the text goes on with its last value while the characters are as wide
+  (a title with one advance for all its characters); a step back with DeltaX or down with DeltaY inside one TextCode
+  starts a new line, kept with a line break (the four lines of a VAT invoice's 密码区 cipher text are one TextCode).
+  Fonts from the resource files, with common Chinese names written in English (宋体 → SimSun, 黑体 → SimHei,
+  楷体 → KaiTi, 仿宋 → FangSong, 微软雅黑 → Microsoft YaHei, …) so Word and LibreOffice find them on any system; bold
+  from `Weight` ≥ 600 or the font, italic, colour from the object (FillColor element or attribute; RGB, grey, CMYK,
+  decimal or #hex channels), its DrawParam or the layer's DrawParam (tax invoices colour the template that way),
+  following `Relative` chains. Invisible objects (`Visible="false"`) are left out.
+- **Templates**: the template pages a page names are read first, so an invoice's labels (发票号码：, 名称：) and its
+  values come out together. In template content, single characters stacked in one column (购买方信息, 备注) or a
+  pair spread over a line (合　计) become one word, once the page's own text is there: a pair with a value between
+  (共 4 页 of a sales list) stays apart.
+- **Annotations** (Annots): the text and pictures of each annotation's appearance, placed from its boundary (a stamp
+  drawn as a picture, a note). Hidden annotations and their paths (highlights, underlines) are left out.
+- **Seals** (`OfdReader.Seals.cs`): an e-invoice's or a contract's seal is stored in its signature
+  (`Signs/Sign_n/SignedValue.dat`, GM/T 0031 SES_Signature). The seal picture in it is shown where the signature's
+  StampAnnot puts it, floating in front of the text. PNG, JPEG, GIF and BMP are kept; a seal that is a small OFD
+  package of its own (the red oval of 全国统一发票监制章 with its characters set round the edge) is drawn with
+  SkiaSharp at 12 pixels per mm on a transparent PNG: text per character with its CTM rotation, stroked and filled
+  paths (lines, Béziers, arcs) and pictures. The DER is walked with every length checked against what is left,
+  nesting and the element count capped; a SignedValue is read up to 4 MB, a seal package unpacks to 16 MB, at most
+  64 signatures with 16 stamps each. The signature is not verified: what shows is the picture the file carries.
+- **Layout** (`OfdReader.Layout.cs`): fragments on one baseline form a line, in reading order top to bottom and
+  left to right; a line that ran to the right edge from at least half the measure continues in the next one
+  (justified, first-line indent kept, no space between Chinese lines). Wide gaps (1.5 em) become tabs with left
+  tab stops where each part starts, so an invoice's item rows keep their columns; a line under such a row whose
+  parts start in its columns and hold no amounts is the wrapped end of its cells and follows after a line break in
+  the same paragraph. Centred and right-aligned lines, left indents and vertical distances (space before) follow
+  the page; page size per page (a new section when it changes), margins from what is drawn. Line distances are
+  exact where the largest text fits ("at least" grows each line to the font's own height in Word and LibreOffice,
+  ~1.4 em for KaiTi, and a full 210 × 140 mm invoice ran onto a second page); a one-line paragraph closer to the one
+  above than 1.2 sizes gets the distance between them. A block that starts above the end of the one before (the
+  invoice number beside the title) is pushed down, and the next gaps take that back, so the frame stays at its
+  place. A table gets its distance from the block above through a 1 pt paragraph, and is `Tight` in HWPX: no 5 mm
+  under it and no empty line in the paragraph that holds it. The first block's distance from the top margin is an
+  empty line of that height (rhwp draws no space before at the top of a page).
+- **Ruled tables** (`OfdReader.Tables.cs`): the approach of the PDF reader in millimetres. PathObjects
+  (AbbreviatedData M/S/L/Q/B/A/C, with Boundary, CTM, line width and stroke colour from the object or its
+  DrawParams) give stroked straight rules and thin filled rectangles; joined rules that meet form grids, and a grid
+  of at least 2 × 2 units with rectangular merged cells and text in two cells becomes a table with the page's
+  column widths and row heights, borders in the drawn colour and shading. Text goes into the cell of its first
+  character (widths without DeltaX are estimated) and is laid out like the page, with exact line spacing so the
+  rows keep their heights. The frame of an e-invoice becomes one table: buyer and seller blocks, the item list
+  (one cell with tabbed rows: the invoice draws no rules between item columns), totals and remarks. A cell with one
+  paragraph about as far from its top as from its bottom is centred; any other keeps its text's distance from the
+  top as the cell's top padding (space before a cell's first paragraph is not drawn by every renderer), and only
+  lines at about single spacing (1.6 sizes) are one paragraph. So the columns of a sales list (销货清单: rules only
+  between the columns, each column one cell with all its rows) keep their rows level, the 小计 at the bottom of 序号
+  beside its amount.
+- **Pictures**: ImageObjects (MultiMedia of type Image) with the box from their CTM. PNG, JPEG, GIF and BMP are
+  kept as they are (the format comes from the bytes, not the name), TIFF and JPEG 2000 are converted to PNG
+  (ImageMagick, at most 100 megapixels), anything else (JBIG2) is left out. A picture alone in its band of the page
+  becomes a paragraph; one beside or over text (a QR code next to the title, a seal on a table) floats at its place
+  on the paper, in front of the text.
+
+Not converted: signature checks (a seal shows whether or not its signature is valid), seal pictures in SVG,
+embedded fonts (the font name is kept), composite objects and other vector drawings (the ⊗ before an invoice's
+amount in words), attachments, more than the first document of a package, tables without rules (their text stays
+in tabbed rows), clipping. Two text blocks side by side without rules share their lines. Renderers place text
+differently inside an exact line (Word and LibreOffice at its foot, 한글 and rhwp at its head), so in the rhwp PDF
+text sits up to 0.2 sizes higher than on the page. LibreOffice adds cell borders to row heights: the DOCX of a
+full 140 mm invoice opened there puts its last line on a second page (rhwp's PDF keeps it on one).
+
+## PDF → PPTX
+
+`Pdf/PdfSlidesConverter.cs` turns a PDF into a PowerPoint deck of pictures: every page is rendered (PDFium, as for
+PDF → images) and becomes one picture on its own slide. The slides look exactly like the PDF but are **not
+editable**: there are no text boxes to change, the PDF's layout is not rebuilt. PDF → DOCX is the editable route.
+
+- **Slide size** is the first page's own size (an A4 portrait PDF gives A4 portrait slides, a PDF exported from a
+  16:9 deck gives 16:9 slides), within PowerPoint's limits of 1 to 56 inches a side. Every page, also one of another
+  size or orientation (pages turned in the PDF are shown turned), is fitted onto the slide without cropping and
+  centred on white.
+- **Resolution** is the preset's render DPI, at least 150 and at most 600; a page larger than 25 megapixels at that
+  resolution (a poster) is rendered at a lower one. The preset's page range picks the pages.
+- **Pictures** are JPEG at the preset's quality (90 by default, as the "PPTX (slides)" preset sets it). Pages are
+  rendered on white, as PDF viewers show them, so they have no transparency that would need PNG, and JPEG keeps a
+  long deck at a size that is easy to send (an A4 text page at 150 dpi is a few hundred KB).
+- **Speaker notes** hold the page's text, read like PDF → TXT (reading order, the invisible OCR layer of scans
+  included), so it can still be searched and copied. Pages without text get no notes; when PdfPig cannot read a PDF
+  that PDFium renders, the deck is written without notes.
+- The package (`Pdf/PictureDeckWriter.cs`) is written by hand: presentation, one slide master with a blank layout,
+  a theme, the slides with their pictures, a notes master and notes slides, and the document properties. The tests
+  validate it with the Open XML SDK and read it back with Filee's own PPTX reader.
+- The edge is `DirectOnly`: the route planner uses it only for a PDF converted to PPTX. A Word document or an image is
+  never turned into picture slides through PDF, and a picture deck is never a step towards ODP, PPSX or another
+  format (a test checks that every other pair of formats keeps its route).
+
+Password-protected PDFs fail with the same message as PDF → DOCX.
+
+## PDF compression
+
+"Compress PDF" (and any PDF → PDF preset with *Compress* set, also with a page range or one file per page) makes a
+PDF smaller while it stays a PDF, for e-mail attachments and upload limits. `Pdf/PdfCompressor.cs` does it with
+PDFsharp and Magick.NET; nothing has to be installed.
+
+| Level | Pictures scaled down to | JPEG quality |
+|---|---|---|
+| Smallest (`Screen`) | 72 dpi | 55 |
+| Balanced (`Ebook`, the preset's) | 150 dpi | 65 |
+| High quality (`Print`) | 300 dpi | 85 |
+
+- **Pictures**: `Pdf/PdfPictureUses.cs` follows the content streams of the pages, of the forms they draw and of
+  annotation appearances (`q`/`Q`/`cm`/`Do`) to find the largest size each picture is drawn at. A picture drawn at more
+  than 1.5 × the level's resolution is scaled down to it (as Ghostscript does); a picture whose drawing can't be
+  followed is taken as large as the page holds it, so it is never scaled down too far. Photos are saved as JPEG at the
+  level's quality, pictures with up to 256 colours (charts, screenshots, logos) losslessly (Flate with PNG
+  prediction). A JPEG that keeps its size is encoded again only when that saves at least 10 %. A picture is replaced
+  only when the result is smaller.
+- **Which pictures**: 8 bits per component, gray, RGB (also ICC-based and calibrated) and CMYK, stored as JPEG, Flate
+  (with or without PNG prediction), RunLength or uncompressed. CMYK JPEGs, 1-bit pictures and masks, indexed
+  (palette) pictures, spot colours, JPEG 2000, JBIG2, CCITT and pictures with a colour-key mask stay as they are.
+- **Transparency**: a soft mask is scaled with its picture and kept lossless, so transparent parts stay transparent.
+- **Duplicates**: a picture stored more than once with the same data (a logo embedded again on every page) is kept once.
+- **Everything else**: every stream is deflated at the highest level when that's smaller; page thumbnails and other
+  applications' private data (`PieceInfo`, such as Illustrator's editing data) are removed, as are unused objects.
+  When the preset doesn't keep metadata, the XMP metadata of pages and pictures goes too. The document's own XMP is
+  written afresh from its document information by PDFsharp, as for every PDF it saves.
+- **Unchanged**: text, fonts, vector drawings, links, bookmarks and form fields. The whole file is compressed as it
+  is; a page range or single pages are first copied into new PDFs, as without compression (which leaves bookmarks and
+  form fields behind), and so is a PDF locked only against changes.
+- **Never bigger**: when nothing gets smaller (a PDF of text only, one compressed before), the PDF is written as it was
+  and the toast (and `filee convert`) says that it couldn't be made smaller. Password-protected PDFs fail with the same
+  message as the other PDF conversions.
+- **Ghostscript** (optional, *Also try Ghostscript* in the preset): when it is installed, the PDF is also run through
+  `pdfwrite` with `-dPDFSETTINGS=/screen`, `/ebook` or `/printer` (the same 72, 150 and 300 dpi) and
+  `-dCompatibilityLevel=1.6`, and the smallest of the two results is kept; when Ghostscript fails, the built-in result
+  stands. It is off by default: Ghostscript rewrites the whole file (fonts are subset again, structure and form fields
+  may change), so it is the user's choice. It also writes object streams, which PDFsharp can't, and its JPEGs are
+  somewhat smaller at the Balanced level.
+- **Not done**: object streams (PDFsharp writes none), font subsetting or removal of unused glyphs, converting
+  colour to gray, flattening transparency or form fields, recompressing JBIG2/CCITT scans.
 
 ## PDF → PPTX
 
@@ -437,6 +745,41 @@ file reader), RtfPipe (MIT) and UTF.Unknown (MPL-1.1, charset detection for old 
   sheets kept, scripts removed) or the text body; pictures sent inline (`cid:`) become data URIs.
 - **EML → TXT**: the same headers and the text body (or the HTML body as text).
 - **EML → ZIP**: the attachments (attached messages as .eml) with safe, unique file names.
+
+### MHTML web archives
+
+A web page saved as "Webpage, Single File" (`.mhtml` from Chrome and Edge, `.mht` from Word and Internet Explorer)
+is a MIME message like an e-mail: the page and its pictures, style sheets and frames as parts of a
+multipart/related body (RFC 2557). `Email/MhtmlArchive.cs` reads it with the same MimeKit parser and writes the page
+as **one HTML file** (`MHTML → HTML`, engine `email`); the HWPX and DOCX writers read archives directly through the
+same code (`DocumentReaders`), so MHTML → DOCX / HWPX is one step and → PDF two (rhwp), and TXT, Markdown, EPUB and
+the other HTML targets go on from the page.
+
+- **The page** is the root of multipart/related (its `start` parameter, else the first part), else the first
+  text/html part. Its charset parameter decodes it; without one (Chrome writes none) or with a wrong "us-ascii" over
+  8-bit text, the BOM, `<meta charset>` or UTF-8 decide, as for HTML files. Quoted-printable and base64 are undone
+  by MimeKit.
+- **References** are matched against the parts' Content-Location, as written or resolved against the page's own
+  location or its `<base href>` (Chrome: `https://…`; Word: `file:///C:/…/page_files/image001.png` named relatively
+  from the page), and `cid:` against Content-ID (Chrome names its style sheets `cid:css-…@mhtml.blink`). These are
+  compared as text only: nothing is downloaded, and no Content-Location is ever opened or written as a file.
+- **Pictures** of the archive (`img src`, `srcset`, `<picture>` sources, the `background` attribute and CSS `url()`)
+  become data URIs; raster only (PNG, JPEG, GIF, WebP, BMP, AVIF, also when saved as application/octet-stream), not
+  SVG. Linked style sheets the archive holds are inlined as `<style>` (with their `@import`s, four levels deep);
+  `url()`s that point elsewhere (web fonts, remote backgrounds) become `none`, and `<` in CSS is escaped so a style
+  sheet cannot end its element.
+- **Safety**: the result goes through the e-mail sanitizer (`EmlConverter.SafeHtml`): scripts, frames, forms,
+  `<link>`, `<base>`, `<meta>`, inline SVG / MathML, event handlers and `javascript:` links are removed, the
+  `Content-Security-Policy` meta allows only inline styles and data: pictures. Links stay when they are http(s) or
+  mailto (made absolute against the page), anchors into the page itself become `#id`.
+- **Limits**: archives over 256 MB are refused; a picture over 32 MB (decoded) is left out, as is any picture once
+  the page's data URIs reach 192 MB (a picture used many times counts each time); 8 MB of style sheet text per page.
+
+Tests (`tests/Filee.Engines.Tests/MhtmlTests.cs`) write archives in code: a Chrome-style one (quoted-printable page
+with the charset only in its meta tag, a `cid:` style sheet, pictures by absolute and relative URL and from CSS, one
+saved as octet-stream, and scripts, frames, remote pictures, fonts and style sheets that must go), a Word `.mht`
+(windows-1252, `file:///C:/` locations, VML fallbacks), a `cid:`-only page in EUC-KR, a picture on disk named by a
+`file:` URI that must not be read, and the routes to HTML, TXT, DOCX, HWPX and PDF.
 
 ## Data (JSON, YAML, TOML, XML, CSV, vCard)
 
@@ -522,17 +865,21 @@ and writes the files; Filee's own renderer draws them with SkiaSharp (one drawin
 
 ## 3D models
 
-`Filee.Engines/Models3D` converts GLB, glTF, STL, OBJ, 3MF and PLY into each other in managed code: every reader
+`Filee.Engines/Models3D` converts GLB, glTF, STL, OBJ, 3MF and PLY into each other, and FBX into any of them, in
+managed code: every reader
 fills one in-memory model (`Model3D`: parts with positions, normals, UVs, vertex colours and triangles; materials
 with a base colour and a base colour texture) and every writer takes it, so each pair is one step. glTF and GLB are
-read and written with [SharpGLTF](https://github.com/vpenades/SharpGLTF) (MIT); STL, OBJ/MTL, PLY and 3MF are Filee's
-own code. No native library (Assimp) and no download.
+read and written with [SharpGLTF](https://github.com/vpenades/SharpGLTF) (MIT); STL, OBJ/MTL, PLY, 3MF and the FBX
+reader are Filee's own code. No native library (Assimp, the FBX SDK) and no download.
 
 - **Units**: STL, OBJ and PLY have none; they are read and written as **millimetres**, as slicers and CAD programs
   treat them. 3MF has a `unit` attribute (micron to metre) and is written in millimetres. glTF is metres. So a 20 mm
-  STL cube is 0.02 m in GLB and 20 mm again in STL. There is no preset option for another unit.
+  STL cube is 0.02 m in GLB and 20 mm again in STL. FBX has `UnitScaleFactor` (centimetres per unit, 1 when
+  missing). There is no preset option for another unit.
 - **Axes** follow Blender's defaults: STL, 3MF and PLY are Z up, OBJ and glTF Y up, so a part standing on a printer's
-  bed stands upright in a glTF viewer and comes back on its base.
+  bed stands upright in a glTF viewer and comes back on its base. FBX says which axis is up (`UpAxis`, `CoordAxis`
+  and their signs in GlobalSettings; the front axis follows, as FBX is right-handed), so 3ds Max's Z-up files stand
+  up too.
 - **Structure**: node hierarchies, 3MF components and build items are flattened: every mesh instance becomes a part in
   world coordinates (one glTF node / OBJ object / 3MF object per part). Polygons are triangulated (ear clipping, so
   concave faces are right). OBJ negative indices, `\` line continuations and 0–255 vertex colours are understood.
@@ -552,6 +899,7 @@ What each format keeps:
 | STL | binary (also with a header starting with "solid") and ASCII (one part per `solid`) | binary, one solid |
 | OBJ + MTL | `o` / `g` / `usemtl` as parts, `v` (+ r g b), `vt`, `vn`, faces of any size; `mtllib` with `Kd`, `d` / `Tr`, `map_Kd` (options skipped) next to the file | **the `.mtl` and the textures are written next to the `.obj`** (`name.obj`, `name.mtl`, `name_texture.png`, named like the output); vertex colours as `v x y z r g b` |
 | 3MF | objects, components (also in other model parts, as Bambu Studio writes them), build transforms, base materials, colour groups (materials extension); `support` / `other` objects skipped | one object per part, base materials from material colours, a colour group from vertex colours |
+| FBX (read only) | binary 6.x–7.x (64-bit records from 7.5, zlib-compressed arrays) and ASCII; mesh geometry with polygons of any size, the first normal, UV, colour and material layer (by polygon vertex, control point or polygon, or all the same; direct or indexed); the model hierarchy from the connections with translation, rotation (every Euler order, pre- / post-rotation, pivots and offsets), scaling and geometric transforms; property templates from Definitions; material `DiffuseColor` and `Opacity`; the diffuse texture embedded (Video `Content`) or named next to the file; animation, skins, blend shapes, NURBS, cameras and lights skipped (the rest pose is read) | — (not written) |
 | PLY | ASCII, binary little / big endian; vertex position, normal, UV (`s`/`t`, `u`/`v`, `texture_u`/`texture_v`), colours of any type; face lists with per-corner `texcoord` and face colours; `comment TextureFile`; other elements skipped | binary little endian, one mesh; material colours become vertex colours |
 
 Lost on the way (no place in the target): **STL** keeps only the triangles (no colours, UVs, normals or materials);
@@ -569,7 +917,99 @@ at 2048 px and scaled down to 1024 px for smooth edges, on a transparent backgro
 Tests (`tests/Filee.Engines.Tests/ModelTests.cs`) build a cube, a sphere and a fan of coloured triangles in code and
 convert each through every format pair, checking triangle counts, bounds, signed volume (winding), normals, UVs,
 colours and materials where both formats keep them; hand-written STL, OBJ, PLY, 3MF and glTF files cover the reading
-details, and a generated 1,000,000-triangle STL the speed.
+details, and a generated 1,000,000-triangle STL the speed. `FbxTests.cs` writes FBX files in code (`FbxBuilder`:
+binary 7.4 and 7.5, plain and compressed arrays, ASCII): a cube under a moved parent, turned and scaled, with a
+templated material and an embedded or neighbouring texture, Z-up files in metres, rotation orders, concave polygons and
+materials by polygon, and every cut or flipped byte of a file, which must read or fail with a clear message.
+
+## Geospatial data (GeoJSON, KML / KMZ, GPX, Shapefile, CSV)
+
+`Filee.Engines/Geo` converts geospatial **vector** data between GeoJSON, KML, KMZ, GPX, Shapefile and CSV in managed
+code, with no GDAL and no download. Every reader fills one in-memory model (`GeoModel`: features, each with an optional
+geometry and its attributes in file order) and every writer takes it, so each pair is one step; through CSV the data
+also reaches the spreadsheet and data engines (Shapefile → XLSX, GeoJSON → JSON, KML → HWPX, …).
+
+- **Always WGS 84.** Whatever the source's coordinate system, results are longitude / latitude in degrees (and a height
+  where there is one). A Shapefile in UTM, Web Mercator or Lambert becomes a GeoJSON that opens in the right place.
+  Keeping the original system is not an option yet.
+- **One file in, one set out.** A Shapefile is read from its `.shp`; the `.dbf` (attributes), `.prj` (coordinate system)
+  and `.cpg` (text encoding) are found next to it in any letter case, the `.shx` is not needed. A Shapefile is written
+  as `name.shp`, `.shx`, `.dbf`, `.prj` and `.cpg`; the engine returns all of them. The file names always match: when
+  the `.shp` name is taken, the next free name is used for the whole set, and a leftover file of the same name (a lone
+  `.dbf`) is never written over.
+- **Save as ZIP.** A geospatial preset can pack its result into one ZIP (Settings → Presets → *Save the result as a ZIP*,
+  or Settings → General to do it for every geospatial result, or `--zip` on the command line): a Shapefile's five files
+  travel together, and the ZIP, named by the preset's file name pattern and conflict policy, is the only output. The
+  step that writes the files runs in the job's work folder and `JobQueue` packs it afterwards, so the option works for
+  any engine and any number of steps.
+- **Same format again** (`shp → shp`, `geojson → geojson`) rewrites the file in WGS 84, which is how a projected
+  Shapefile is reprojected, and splits mixed geometries (below).
+
+What each format keeps:
+
+| Format | Read | Written |
+|---|---|---|
+| GeoJSON | FeatureCollection, Feature or a bare geometry; UTF-8, UTF-16 or an old code page; comments and trailing commas; `id` (as the attribute `id`); the 2008 `crs` member for the systems below; attributes as text, numbers, true / false, null (lists and objects become their JSON text); Z | one feature per line, polygons in RFC 7946 winding (outer counter-clockwise), at most ten decimals |
+| KML / KMZ | every Placemark wherever it sits (Document, Folders), `name`, `description`, `ExtendedData` (`Data`, `SimpleData`); Point, LineString, LinearRing, Polygon with holes, MultiGeometry (as Multi* when the parts are alike, else a collection), `gx:Track`, `gx:MultiTrack`; altitude; KMZ: `doc.kml`, else the first `.kml` inside | one Document with a Placemark per feature, `name` / `description` from the attributes of that name, all other attributes as `ExtendedData`, `MultiGeometry` for several parts; KMZ is a ZIP with `doc.kml` |
+| GPX | 1.0 and 1.1; waypoints (Point), routes (LineString), tracks (LineString, or MultiLineString for several segments); `name`, `cmt`, `desc`, `src`, `sym`, `type`, `number`, `time`; `ele` as the height; `gpx_type` says which of the three a feature was | points as waypoints, lines as one track (several lines are its segments) or, with `gpx_type` = route, as routes; polygon outlines as tracks; only the fields on the left survive |
+| Shapefile | Point, MultiPoint, PolyLine, Polygon and their Z types; rings sorted into polygons and holes by direction and containment; `.dbf` text, numbers, true / false, dates; deleted rows skipped; MultiPatch is refused | one Shapefile per kind of geometry present; Z types when any height is present; WGS 84 `.prj`; `.dbf` in UTF-8 with a `.cpg` |
+| CSV | a `wkt` / `geom` / `geometry` / `the_geom` column (WKT or EWKT), or longitude and latitude columns (`lon`, `lng`, `long`, `longitude`, `x`; `lat`, `latitude`, `y`; a decimal comma is fine), and `elevation` / `alt` / `z`; other columns become attributes, typed; rows without a usable location are kept without a geometry | `longitude`, `latitude` (+ `elevation`) when every geometry is a point, else a `wkt` column; then the attributes. A dataset that already has a longitude or latitude attribute gets `wkt` so the file reads back unchanged |
+
+**Coordinate systems.** Geographic systems (degrees) and the projections most projected data uses, read from a `.prj`
+(ESRI or OGC WKT 1), a GeoJSON `crs` name or an EPSG code: Transverse Mercator (UTM, Gauss-Krüger, state plane, via
+Krüger's series), Mercator and Web Mercator, Lambert Conformal Conic (1 and 2 parallels), Albers;
+metres, feet and US survey feet. They agree with PROJ to well under a millimetre: `GeoCrsTests` checks fifteen systems against reference
+positions computed with pyproj. Anything else (Lambert azimuthal, stereographic, oblique Mercator, WKT 2, geocentric,
+local) is **refused with its name** (`error.geo_unsupported_crs`) rather than read as degrees. So is a projected system
+whose geographic part has a prime meridian other than Greenwich or an angular unit other than degrees (ESRI's NTF Paris
+Lambert zones count their longitudes from Paris in grads): the projection's formulas assume neither, and the data would
+land about 170 km from where it is. Coordinates outside the Earth with no usable system (`error.geo_unknown_crs`, a CSV or
+GeoJSON in metres, a Shapefile without `.prj`) are refused too.
+
+**Datums are not shifted.** WGS 84, NAD83, ETRS89, GDA, JGD, Korea 2000, CGCS2000, RGF93, SIRGAS and every other datum on
+the GRS 80 / WGS 84 ellipsoid agree within a metre or two. A datum on another ellipsoid (Bessel, Airy, Clarke,
+International: Tokyo / Korean 1985, DHDN, OSGB36, ED50, NAD27, …) is converted as if it were WGS 84, which can be
+tens to hundreds of metres off, and the file carries the note `notice.geo_datum_assumed`.
+
+**Shapefile writing.**
+
+- A Shapefile holds one kind of geometry. Mixed data becomes `name_points`, `name_lines` and `name_polygons` (each a
+  full set) with the note `notice.geo_shapefile_split`. A collection is split into its members, each a record with the
+  attributes repeated; features without geometry go into the first file as null shapes.
+- Polygons are written clockwise, holes counter-clockwise, rings closed; Multi* geometries are one record.
+- `.dbf` columns: whole numbers as `N`, other numbers as `N` with the decimals they need (15 at most, 24 wide), true /
+  false as `L`, everything else as text (`C`, up to 254 bytes; longer text is cut between characters,
+  `notice.geo_text_cut`). A column that mixes numbers and text is text. Field names are cut to 10 bytes, made of letters,
+  digits and underscores, and made unique (`population_2020`, `population_2021` → `population`, `populati_1`,
+  `notice.geo_field_names`). More than 255 columns keep the first 255 (`notice.geo_columns_dropped`). Features without
+  attributes get a record-number field `FID`, since a `.dbf` needs one.
+- Reading takes the text encoding from the `.cpg`, else the language driver byte of the `.dbf`, else UTF-8 if the text is
+  valid UTF-8, else Korean CP949, else Windows-1252. (Chinese GBK and Korean CP949 can't be told apart without a `.cpg`.)
+- The files are limited to 2 GB (`error.geo_too_large`); whole files are read into memory, a few at a time.
+
+**Safety.** XML (KML, GPX) is read without DTDs or external entities, so a file can't read other files or expand into
+gigabytes. The tree is built from `XmlReader` in `GeoXml.Load` rather than by `XDocument.Load` (whose time is quadratic
+in the depth: 48 seconds for 100,000 nested levels), and elements nested more than 256 levels are refused while reading;
+MultiGeometry may nest 32 levels. A document is limited to about 67 million characters and 3 million elements (a file
+of tiny elements costs about 25 bytes of memory per character: 40 million characters in a 150 KB KMZ took 1.1 GB before
+the element limit, and now stops at about 260 MB). A KMZ whose `.kml` is declared larger than 256 MB is refused before it is unpacked, and the unpacked bytes are
+counted as they are read (`LimitedStream`), since a ZIP header can understate its size. Counts and indexes in binary
+Shapefiles are checked against the record before anything is allocated, the attribute table is read only as far as there
+are shapes, rings are sorted into polygons smallest outer ring first with the cancellation token honoured, nesting of
+JSON, WKT and WKT definitions is limited, and every failure is a reason the user can act on: a damaged file, a system
+Filee can't convert, a CSV with no coordinates (`error.geo_*` in the language files). Nothing is written when a
+conversion fails.
+
+Tests: `GeoFormatTests`, `GeoShapefileTests`, `GeoCrsTests`, `GeoHostileInputTests`, `GeoZipTests` and
+`GeoRobustnessTests` in `tests/Filee.Engines.Tests`. The Shapefiles in `tests/Filee.Engines.Tests/Geo` were written by
+GDAL (synthetic data; `Geo/make-test-geo.py` recreates them), so Filee's reader and writer are not only checked against
+each other. Everything else is written in the tests: `GeoBuilders.cs` has GeoJSON, KML and GPX text and a Shapefile and
+dBASE builder that follows the ESRI specification for the cases GDAL won't write, and the Shapefiles Filee writes are
+parsed in the tests from the specification, not read back with the engine. `GeoRobustnessTests` reads every file
+truncated at several lengths and with random bytes changed; `GeoHostileInputTests` keeps each input that once crashed the
+process, took minutes or used gigabytes.
+
+Not here yet: raster data (GeoTIFF, bands), GeoPackage, zipped Shapefiles as input, datum shifts, more projections.
 
 ## HWPX reader
 
@@ -644,6 +1084,17 @@ LIT, LRF, CHM, PDB, PML, RB, SNB, TCR and OEB → EPUB, and EPUB → MOBI, AZW3,
 EPUB is the hub, so for example FB2 → AZW3 is FB2 → EPUB (built in) → AZW3 (calibre). Its edges cost 20, so
 built-in routes always win where they exist.
 
+calibre also makes PDFs of EPUB, MOBI, AZW3, AZW, PRC, FB2, HTMLZ, TXTZ and the formats only it reads (one
+`ebook-convert` run: A4 with `--paper-size a4`, page numbers with `--pdf-page-numbers`, calibre's margins and font
+sizes; the built-in route ignores the preset's PDF options too). For long books it is much faster than the built-in
+route, HWPX writer → rhwp (a 640-page novel: about a minute against some 48 minutes, #127), but the built-in route
+stays the default so results don't change under users. The PDF edges cost 23: in the default engine order the
+built-in route costs 31 (HWPX writer 10 + 8, rhwp 10 + 3) and calibre 23 + 9, so the built-in route wins by one; once
+the user moves calibre above the HWPX writer in Settings → *Engines*, calibre costs at most 31 and the built-in route
+at least 32. LIT, LRF and the other formats only calibre reads go straight to PDF instead of calibre → EPUB → HWPX
+writer → rhwp. When rhwp runs out of time and calibre is installed, the error says to rank calibre higher; Filee
+never switches engines by itself.
+
 - The pinned `calibre-64bit-<version>.msi` from download.calibre-ebook.com is unpacked like LibreOffice; the folder
   with `ebook-convert.exe` becomes `engines/calibre`.
 - Each run gets its own configuration, cache and temp folders in the job's work directory
@@ -659,7 +1110,21 @@ For HWP / HWPX → PDF, rhwp renders a copy of the HWPX (an HWP is exported with
 change something for it (`Hwp/RhwpInput.cs`): fonts that are installed, the laid-out size of boxes sized relative to
 the column, spaced equation commands, and, in an HWPX exported from an HWP (rhwp's `META-INF/rhwp-hwp5-origin`
 marker), the stored line of a cell paragraph that holds only a floating table moved up to the paragraph's top, so the
-table is not drawn over the paragraphs below it (#49).
+table is not drawn over the paragraphs below it (#49). Paragraphs without stored lines (Word equations written by the
+HWPX writer) get room for their equations: rhwp puts a line's baseline at 85 % of its tallest equation and the
+equation's own baseline on it, so a fraction, matrix or sum hangs below the line; that overhang is added as space
+after the paragraph (#143).
+
+An HWPX with text that needs shaping (Arabic, Hindi, Thai, ...) goes to LibreOffice with H2Orestart instead, like the
+documents above; an HWP is not scanned and stays with rhwp.
+
+rhwp renders text slowly: about 1 s per KB of section XML, some 4 s per page of a novel (rhwp 0.8.7 on an
+i7-1185G7, pictures cost little). So each rhwp run's time limit follows the document's text: 2 minutes + 30 minutes
+per MB of unpacked `Contents/section*.xml` (an HWP counts three times its file size, its text being deflated), at most
+60 minutes, after which a rhwp that hangs is stopped. The progress estimate assumes 15 minutes per MB. Cancelling
+stops rhwp at once. A time-out fails with "rhwp couldn't finish this long document in time" (with calibre installed,
+it suggests ranking calibre above the HWPX writer for e-books). The other engines keep fixed limits: LibreOffice 3
+minutes, Ghostscript 5, Pandoc 2 and calibre 10 (it made the 640-page novel's PDF in a minute).
 
 ## Archives
 
@@ -710,6 +1175,9 @@ bundled with the installer), never a 7-Zip installed on the PC. It runs as a sep
   fails when two conversions share a profile).
 - HWP/HWPX import comes from the H2Orestart extension, which is written in Java; Filee points LibreOffice at the
   downloaded JRE (`-env:UNO_JAVA_JFW_JREHOME`).
+- When LibreOffice can't load an Office Open XML or OpenDocument file ("source file could not be loaded"), Filee
+  converts once more from a copy in the job folder with the same parts in a plainly written ZIP (`PackageRepacker`):
+  LibreOffice 26.2 refuses some valid containers, e.g. uncompressed entries with data descriptors (Tencent Docs, #141).
 - It is the only reader of rarer formats, converted to PDF and to the editable formats of their kind: DOT, Works /
   WPS Writer, WordPerfect, Lotus Word Pro, AbiWord, Apple Pages, StarWriter, ClarisWorks / AppleWorks (`.cwk`),
   MacWrite (`.mcw`), T602 (`.602`) and Pocket Word (`.psw`) (→ DOCX, ODT, FODT, OTT, DOC, RTF, TXT, HTML); WPS
@@ -750,7 +1218,8 @@ DocBook (`.dbk`, `.docbook`; written as DocBook 5), Jupyter notebooks (`.ipynb`)
 - Extensions that mean other things are not claimed: man pages only as `.man` (`.1` … `.9` are also rotated logs,
   `app.log.1`), DocBook as `.dbk` / `.docbook`, never every `.xml`.
 - DocBook, man pages, OPML, Typst, HTML and LaTeX are written with `--standalone` (a root element, a `.TH` header,
-  a preamble), the text formats extract pictures into `<name>_files` next to the result.
+  a preamble), the text formats extract pictures into `<name>_files` next to the result (Markdown with *Leave out
+  pictures* gets none: a Lua filter drops them).
 
 ## Subtitles
 
@@ -789,8 +1258,8 @@ Filee (with the GPL source offer), then an `engines.json` component and an optio
 ## FFmpeg
 
 `Media/FfmpegConverter.cs` converts every video format to every video format, to animated GIF or APNG, to a still PNG
-frame, to every audio format (the sound track) and to SRT, ASS and WebVTT (the subtitles); every audio format to every
-audio format; and GIF, APNG and PNG to MP4, WEBM and MOV.
+frame or a folder of every frame, to every audio format (the sound track) and to SRT, ASS and WebVTT (the subtitles);
+every audio format to every audio format; and GIF, APNG and PNG to MP4, WEBM and MOV.
 Same-format edges exist too, so "MP4 720p" works on MP4 files and "MP3 128k" on MP3 files.
 
 - The download is the gyan.dev **9.0.2 "full_build-shared"** Windows build (GPL-3.0, run as a separate program).
@@ -810,8 +1279,8 @@ Same-format edges exist too, so "MP4 720p" works on MP4 files and "MP3 128k" on 
   | OGV | Theora + Vorbis |
   | DV | DV25 with the same NTSC/PAL frames as VOB, 48 kHz stereo PCM |
   | MXF | OP1a with long-GOP MPEG-2 + 48 kHz PCM |
-  | GIF | two passes: palettegen over the whole clip, then paletteuse; 15/12/10 fps and at most 640/480/320 px wide (High/Balanced/Small) |
-  | APNG | one pass with the `apng` encoder (24-bit RGB, mixed prediction) and muxer, looping; the same frame rates and widths as GIF |
+  | GIF | two passes: palettegen over the whole clip, then paletteuse; 15/12/10 fps and at most 640/480/320 px wide (High/Balanced/Small); *Playback speed* adds `setpts=PTS/<speed>` before the frame rate |
+  | APNG | one pass with the `apng` encoder (24-bit RGB, mixed prediction) and muxer, looping; the same frame rates, widths and playback speed as GIF |
   | MP4, M4V, MKV with *Video codec* HEVC · MOV with HEVC | x265 (preset medium, `hvc1` tag in MP4/M4V/MOV) + AAC |
   | MP4, M4V, MKV, WEBM with *Video codec* AV1 | SVT-AV1 (preset 8), or libaom-av1 (cpu-used 6, row multithreading) with an FFmpeg that lacks SVT-AV1 |
   | MP3 · M4A/M4B · AAC · OGG · OPUS · WEBA · MKA · WMA · MP2 · AC3 · E-AC3 · AMR | LAME VBR (V0/V2/V5) or CBR · AAC, or ALAC with *Audio codec* ALAC · AAC (ADTS) · Vorbis · Opus · Opus · Opus · WMA 2 · MP2 · AC-3 · E-AC-3 · AMR-NB 12.2k (8 kHz mono) |
@@ -844,6 +1313,29 @@ Same-format edges exist too, so "MP4 720p" works on MP4 files and "MP3 128k" on 
   for the rest. The encoders are looked up with `ffmpeg -encoders` once per FFmpeg, so a copy the user picked without
   x265 or AV1 fails with a clear message instead of an FFmpeg error. x265 and SVT-AV1 log only errors
   (`-x265-params log-level=error`, `SVT_LOG=1`).
+- **Hardware encoding** (*Hardware acceleration* in the video card, `MediaOptions.HardwareEncoding`; off by default and
+  for older presets, so nobody's results change without asking). H.264 and HEVC encodes (not VP9, AV1 and the
+  MPEG-style codecs, not stream copies, not pictures → video) go to the graphics chip (`Media/HardwareVideo.cs`,
+  `Media/HardwareProbe.cs`):
+
+  | System | Tried in this order |
+  |---|---|
+  | Windows | `*_nvenc` (NVIDIA), `*_qsv` (Intel Quick Sync), `*_amf` (AMD) |
+  | macOS | `*_videotoolbox` with constant quality (Apple Silicon), then with a bitrate (Intel Macs reject `-q:v`) |
+  | Linux | `*_nvenc`, then `*_vaapi` on `/dev/dri/renderD128` (`-vaapi_device`, frames uploaded with `format=nv12,hwupload`) |
+
+  FFmpeg lists encoders the computer can't run (NVENC without an NVIDIA card), so only the ones `ffmpeg -encoders`
+  lists are tried, each first with a test encode with the real options (0.1 s of `testsrc` at 256 × 144 to the null
+  muxer, 15 s limit). The first that succeeds is used; results are kept per FFmpeg executable, encoder, rate control
+  and bit depth until Filee restarts, and written to the log. Quality: *High/Balanced/Small* become quantizer 19/24/29
+  for H.264 and 23/27/31 for HEVC (one above x264's and x265's CRF: hardware encoders spend bits less wisely) as NVENC
+  `-rc vbr -cq N -b:v 0 -preset p5`, Quick Sync `-global_quality N -preset medium` (ICQ), AMF `-rc cqp -qp_p N -qp_i N−2`
+  (`-quality balanced`) and VA-API `-rc_mode CQP -qp N`; VideoToolbox gets `-q:v` 70/60/50, or on Intel Macs
+  `-b:v` from 0.14/0.09/0.05 bits per pixel per frame (× 0.65 for HEVC). 8-bit video is NV12 (H.264 High, HEVC Main);
+  10-bit and HDR sources stay P010 HEVC Main 10 with their colour tags when the encoder passes a 10-bit test encode,
+  otherwise x265 encodes them. HEVC keeps the `hvc1` tag in MP4/M4V/MOV. When a hardware encode fails anyway (a
+  picture too large for the chip, a driver error), the partial output is deleted and the file is encoded again with
+  x264/x265; that is logged, not shown as a failure.
 - DSD (DSF, DFF) decodes at 2.8 MHz or more: lossless and PCM targets get 88.2 kHz, Vorbis and WMA 44.1 kHz, the
   other lossy encoders their nearest supported rate.
 - Subtitle extraction takes the first text subtitle track (SubRip, ASS/SSA, WebVTT, MP4 timed text, CEA-608, …).
@@ -855,12 +1347,57 @@ Same-format edges exist too, so "MP4 720p" works on MP4 files and "MP3 128k" on 
   FLAC. Portrait phone videos are turned upright. Odd sizes are evened out, frame rates that MPEG-2/MXF/MPEG-4 part 2
   cannot store are converted, and channels WMA or AMR cannot hold are mixed down.
 - Progress comes from `-progress` (position ÷ duration from ffprobe); the GIF palette pass reports per-frame stats of
-  a discarded copy of its frames. Cancelling kills the process tree and deletes the partial output. There is no
-  time limit, but FFmpeg is stopped when it reports nothing for 10 minutes. At most two conversions run at a time
-  (FFmpeg's encoders use every core themselves).
+  a discarded copy of its frames. Cancelling kills the process tree, waits (up to 10 seconds) until it has exited and
+  deletes the partial output. There is no time limit, but FFmpeg is stopped when it reports nothing for 10 minutes.
+  At most two conversions run at a time (FFmpeg's encoders use every core themselves).
 - Video → PNG writes one still frame (a tenth into the video, where the picture has usually faded in); the image
   engines turn it into JPG, WEBP, PDF, …. The GIF edge costs more, so these routes never go through an animated GIF
   of the whole video.
+- **Every frame** (*Save every frame of a video* on a PNG or JPG preset, `MediaOptions.SaveEveryFrame`; the presets
+  "Extract frames (PNG)" and "Extract frames (JPG)", on no donut): `Media/FrameSequenceWriter.cs` writes
+  `frame_000001.png`, `frame_000002.png`, … into one folder, named by the output rule with `_frames` added
+  (`clip_frames`, `clip_frames (2)`; skipped, or filled over like an extracted archive, by the conflict rule).
+  - Routes: the frame edges (`ConversionEdge.FrameSequence`, video → PNG and video → JPG) are taken only when
+    `Preset.SavesFramesOf` the file (the option is set, the target is PNG or JPG and the file is a video), and then as
+    the whole route (`RoutePlanner.Plan(from, to, frames: true)`). Without the option video → JPG stays the still frame
+    above, which the image engines turn, resize and so on; other files and targets ignore the option.
+  - *Every Nth frame* (1–1000) keeps frames 1, N + 1, 2N + 1, … (`select`, `-fps_mode vfr`). Otherwise every decoded
+    frame is written once (`-fps_mode passthrough`): a variable frame rate phone video gives as many pictures as it
+    has frames, not one per 1/30 s with the slow parts repeated. The pictures are numbered, not named by time.
+  - Only the first video stream is read (`-map 0:V:0`). Pixels are made square and portrait videos are turned
+    upright, as for the still frame; nothing else of the image options is applied (no resizing, rotating or
+    metadata). JPG uses the preset's quality (100 → `-q:v 2`, 90 → 5, 1 → 31). HDR video (PQ, HLG) is not
+    tone-mapped, so its frames look flat and grey; 10-bit video becomes 16-bit PNG.
+  - Before anything is written the pictures are estimated (duration × frame rate ÷ interval). More than 100,000
+    (`MediaOptions.MaxFrames`, about an hour at 30 fps), or more than the free space of the output drive (estimated at
+    1.5 bytes a pixel for PNG, 3 for 10-bit video, 0.25 for JPG), fails with a reason in the user's language
+    (`ConversionRefusedException`); a file that doesn't say its length or frame rate is not checked. The editor shows
+    how many pictures a minute of 30 fps video gives at the chosen interval.
+  - The frames go into a hidden folder next to the output and are moved into place when FFmpeg has finished, so a
+    cancelled or failed run leaves no half-filled folder.
+- **Live / Motion Photos** (*Extract Live/Motion Photo video* on an MP4 or MOV preset, `MediaOptions.ExtractMotionPhoto`;
+  the preset "Extract Live Photo video", on no donut): the video saved with a phone photo becomes the output, with its
+  sound, instead of a video of the still picture.
+  - Routes: the motion edges (`ConversionEdge.MotionPhoto`, JPG, HEIC, AVIF and LIVP → MP4 and MOV,
+    `MediaOptions.MotionPhotoSources`) are taken only when `Preset.ExtractsMotionOf` the file, and then as the whole
+    route (`RoutePlanner.Plan(from, to, motionPhoto: true)`). A LIVP always gives its video; GIF, PNG, WebP and other
+    pictures ignore the option and become a video of the picture as below.
+  - Where the video is (`Media/MotionPhoto.cs`, `Media/LivePhotoSource.cs`), always from the photo's own metadata,
+    never by searching its bytes for an MP4 signature: Motion Photo 1.0 JPEGs (Pixel, Samsung, …) give the length of
+    the appended video in the XMP container directory (`GCamera:MotionPhoto`, the last `Container:Item`, attributes or
+    elements); older Google "MicroVideo" JPEGs an offset back from the end (`GCamera:MicroVideoOffset`); HEIC and AVIF
+    hold the video in a top-level `mpvd` box. The video must start with `ftyp` and hold a `moov`, else the metadata is
+    stale (an editor rewrote the picture) and nothing is guessed; it ends with its last whole box, which leaves
+    Samsung's SEF trailer out. An iPhone photo (JPG or HEIC) takes the MOV next to it with the same name, only when
+    both carry the same content identifier (tag 17 of Apple's maker note, `com.apple.quicktime.content.identifier`);
+    a LIVP (the ZIP iCloud downloads give) takes its one MOV, whose identifier is only checked for the log.
+  - The video is copied into the work directory (at most 512 MB; JPEG metadata is read only from the first 8 MB, XMP
+    without DTDs; LIVP entries are copied to names of Filee's own, never extracted by their names), converted there
+    like any video (copied as it is into MP4/MOV when its codecs fit) and moved into place when finished: a failed or
+    cancelled run never touches a file "overwrite" would replace, and the output never replaces the iPhone MOV it was
+    read from (IMG_0001.HEIC → `IMG_0001 (2).mov`). A photo without a video fails with "This photo has no video
+    Filee can read"; why goes to the log.
+  - Not read: vendor formats without this metadata (Huawei's "LIVE_" trailer, for one).
 - Pictures → MP4/WEBM/MOV go through a full-size PNG from the image engines (HEIC → PNG → MOV): a 5-second still at
   30 fps, one quality step above the preset (identical frames cost almost nothing; x264 `-tune stillimage`). The
   PNG's ICC profile is read (`-flags2 +icc_profiles`), so primaries and transfer are tagged as the photo's (Display

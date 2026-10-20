@@ -6,6 +6,7 @@ using Filee.Core.Conversion;
 using Filee.Core.Localization;
 using Filee.Core.Platform;
 using Filee.Core.Settings;
+using Filee.Core.Web;
 using Filee.Engines;
 using Filee.Engines.Infrastructure;
 using Filee.Platform.Linux;
@@ -24,7 +25,7 @@ public static class AppHost
 
     public static T Get<T>() where T : notnull => Services.GetRequiredService<T>();
 
-    public static IServiceProvider Build(string? dataDirectory = null)
+    public static IServiceProvider Build(string? dataDirectory = null, UserDataStore? preloadedStore = null)
     {
         var dataDir = dataDirectory ?? UserDataStore.DefaultDirectory;
         var services = new ServiceCollection();
@@ -33,17 +34,18 @@ public static class AppHost
             .AddProvider(new FileLoggerProvider(Path.Combine(dataDir, "logs")))
             .SetMinimumLevel(LogLevel.Information));
 
-        services.AddSingleton(sp => new UserDataStore(dataDir, sp.GetRequiredService<ILogger<UserDataStore>>()));
-        services.AddSingleton<IPlatformServices>(_ => PlatformLayers.Create());
+        services.AddSingleton(sp => preloadedStore ?? new UserDataStore(dataDir, sp.GetRequiredService<ILogger<UserDataStore>>()));
+        services.AddSingleton<IPlatformServices>(_ => PlatformLayers.Create()); // Mandarina: Windows gets the Mandarina layer
 
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ILocalizer>(sp => sp.GetRequiredService<LocalizationService>());
         services.AddSingleton<ThemeService>();
         services.AddSingleton<SystemIntegrationService>();
+        services.AddSingleton<ElevationService>();
 
         // Conversion engines
         services.AddSingleton(_ => new EngineEnvironment(dataDir));
-        services.AddSingleton(sp => EngineRegistry.CreateAll(sp.GetRequiredService<EngineEnvironment>()));
+        services.AddSingleton(sp => EngineRegistry.CreateAll(sp.GetRequiredService<EngineEnvironment>(), sp.GetRequiredService<ILoggerFactory>()));
         services.AddSingleton(sp => new ConverterCatalog(sp.GetRequiredService<IReadOnlyList<IConverter>>()));
         services.AddSingleton(sp => new JobQueue(
             sp.GetRequiredService<ConverterCatalog>(),
@@ -52,6 +54,8 @@ public static class AppHost
             EngineRegistry.FindFileCombiner(sp.GetRequiredService<IReadOnlyList<IConverter>>()),
             EngineRegistry.FindTiffMerger(sp.GetRequiredService<IReadOnlyList<IConverter>>())));
 
+        // Files dragged from a browser with only an address are downloaded without the browser's cookies.
+        services.AddSingleton(_ => new WebDownloader(userAgent: $"Mandarina/{typeof(AppHost).Assembly.GetName().Version?.ToString(3)}")); // Mandarina: own name
         services.AddSingleton<EngineDownloadService>();
         services.AddSingleton<PresetAvailability>();
         services.AddSingleton<RadialViewModel>();
@@ -63,8 +67,9 @@ public static class AppHost
         services.AddSingleton<RadialController>();
         services.AddSingleton<TrayService>();
         services.AddSingleton<UpdateService>();
+        services.AddSingleton<MemoryTrimmer>();
         services.AddSingleton<WindowService>();
-        services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<WhatsNewService>();
 
         _services = services.BuildServiceProvider();
         return _services;
