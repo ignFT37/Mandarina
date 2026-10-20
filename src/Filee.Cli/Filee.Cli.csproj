@@ -7,6 +7,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>filee-cli</AssemblyName>
+    <AssemblyTitle>Mandarina command line</AssemblyTitle> <!-- Mandarina: the file description -->
     <RootNamespace>Filee.Cli</RootNamespace>
     <ApplicationIcon>..\Filee.App\Assets\Icons\filee.ico</ApplicationIcon>
   </PropertyGroup>

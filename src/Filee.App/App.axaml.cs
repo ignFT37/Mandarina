@@ -322,8 +322,14 @@ public partial class App : Application
     {
         // Only Filee's languages; anything else keeps the setting (normally "auto", Windows' language).
         var language = LocalizationService.Languages.FirstOrDefault(l => l.Code.Equals(options.Language, StringComparison.OrdinalIgnoreCase)).Code;
+        // Mandarina: the integration options ticked in the installer (setup-options.json next to the program), applied once.
+        var installerChoice = Mandarina.InstallerChoices.Consume(Path.GetDirectoryName(Environment.ProcessPath), store.Settings);
         if (options.StartWithWindows is null && options.ContextMenu is null && language is null)
+        {
+            if (installerChoice)
+                store.SaveSettings();
             return;
+        }
         if (options.StartWithWindows is { } start)
             store.Settings.StartWithSystem = start;
         if (options.ContextMenu is { } menu)

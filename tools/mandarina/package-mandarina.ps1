@@ -51,6 +51,15 @@ foreach ($file in Get-ChildItem $work -File | Where-Object { $_.Name -match '^(F
         if ($text.Contains($needle)) { throw "$($file.Name) contains '$($needle -replace "`0", '')': publish without debug info (-NoDebugInfo)" }
     }
 }
+# Code-signing services want one product name and version on every file: Mandarina's own programs and DLLs must agree, and say
+# "Mandarina" (not Filee) where Task Manager and SmartScreen read it.
+$info = foreach ($file in Get-ChildItem $work -File | Where-Object { $_.Name -match '^(Filee|filee-cli|Mandarina)' -and $_.Extension -in '.dll', '.exe' }) {
+    $v = $file.VersionInfo
+    if ($v.ProductName -ne 'Mandarina') { throw "$($file.Name): ProductName is '$($v.ProductName)', not Mandarina" }
+    if ($v.FileDescription -notlike 'Mandarina*') { throw "$($file.Name): FileDescription is '$($v.FileDescription)', not Mandarina" }
+    $v.ProductVersion
+}
+if (@($info | Select-Object -Unique).Count -ne 1) { throw "Mandarina's files disagree on ProductVersion: $(($info | Select-Object -Unique) -join ', ')" }
 foreach ($file in 'LICENSE', 'THIRD-PARTY-NOTICES.md') {
     Copy-Item (Join-Path $repo $file) (Join-Path $work $file) -Force
 }
