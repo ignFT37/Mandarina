@@ -114,7 +114,8 @@ jobs:
           `SHA256SUMS.txt`, and see "Unsigned downloads" in the README. FFmpeg, Pandoc and the Whisper models are not included;
           Mandarina downloads the ones you choose from Settings → Engines.
           '@
-          $flags = @('--generate-notes', '--notes', $notes, '--verify-tag')
+          # A draft: only you see it until you press "Publish release" on GitHub, after checking the files.
+          $flags = @('--draft', '--generate-notes', '--notes', $notes, '--verify-tag')
           if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { $flags += '--prerelease' }
           gh release create $env:GITHUB_REF_NAME --title "Mandarina ${{ steps.version.outputs.version }}" @flags `
             (Get-ChildItem artifacts/release -File).FullName

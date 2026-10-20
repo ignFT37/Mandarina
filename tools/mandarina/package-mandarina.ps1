@@ -32,7 +32,7 @@ if (-not $SkipPublish) {
     # Its own build root, so packaging does not disturb a development build (or a test run) of another checkout.
     if (-not $env:MandarinaBuildRoot) { $env:MandarinaBuildRoot = Join-Path $env:USERPROFILE '.mandarina\build-release\' }
     # The script throws when a step fails; $LASTEXITCODE is robocopy's there (1..7 mean "copied something").
-    & (Join-Path $PSScriptRoot 'publish-mandarina.ps1') -Output $work -Version $Version
+    & (Join-Path $PSScriptRoot 'publish-mandarina.ps1') -Output $work -Version $Version -NoDebugInfo
 }
 if (-not (Test-Path (Join-Path $work 'Filee.exe'))) { throw "No published build in $work" }
 
@@ -40,8 +40,17 @@ if (-not (Test-Path (Join-Path $work 'Filee.exe'))) { throw "No published build 
 $exe = Join-Path $work 'Mandarina.exe'
 if (Test-Path $exe) { Remove-Item $exe -Force }
 Move-Item (Join-Path $work 'Filee.exe') $exe
-# Debug symbols are 27 of the 141 MB (libSkiaSharp.pdb alone 21) and carry the builder's folder names.
-Get-ChildItem $work -Filter *.pdb -Recurse | Remove-Item -Force
+# Debug symbols are 27 of the 141 MB (libSkiaSharp.pdb alone 21), and the XML documentation files are only for developers.
+Get-ChildItem $work -Include *.pdb, *.xml -File -Recurse | Remove-Item -Force
+# Nothing of the builder's user profile may travel in Mandarina's own files (the path of a .pdb is written into every DLL).
+$latin1 = [Text.Encoding]::GetEncoding(28591)
+$needles = @($env:USERPROFILE, ($env:USERPROFILE -replace '(.)', "`$1`0")) | Where-Object { $_ }
+foreach ($file in Get-ChildItem $work -File | Where-Object { $_.Name -match '^(Filee|filee-cli|Mandarina)' -and $_.Extension -in '.dll', '.exe', '.json' }) {
+    $text = $latin1.GetString([IO.File]::ReadAllBytes($file.FullName))
+    foreach ($needle in $needles) {
+        if ($text.Contains($needle)) { throw "$($file.Name) contains '$($needle -replace "`0", '')': publish without debug info (-NoDebugInfo)" }
+    }
+}
 foreach ($file in 'LICENSE', 'THIRD-PARTY-NOTICES.md') {
     Copy-Item (Join-Path $repo $file) (Join-Path $work $file) -Force
 }

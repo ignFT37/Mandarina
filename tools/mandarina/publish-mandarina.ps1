@@ -9,7 +9,9 @@
 param(
     [string]$Output = (Join-Path $env:USERPROFILE '.mandarina\publish\win-x64'),
     # Overrides the Version of Directory.Build.props (the release workflow passes the tag's).
-    [string]$Version
+    [string]$Version,
+    # No debug symbols: without them the DLLs do not carry the path of the .pdb they were built with (the builder's folders).
+    [switch]$NoDebugInfo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,6 +20,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 # The app and the command line go to the same folder, so they share the runtime.
 $options = @('-c', 'Release', '-r', 'win-x64', '--self-contained', '-p:PublishReadyToRun=true', '-p:FileeRelease=true', '-o', $Output, '-nologo', '-v', 'q')
 if ($Version) { $options += "-p:Version=$Version" }
+if ($NoDebugInfo) { $options += '-p:DebugType=none', '-p:DebugSymbols=false' }
 foreach ($project in 'src\Filee.App\Filee.App.csproj', 'src\Filee.Cli\Filee.Cli.csproj') {
     dotnet publish (Join-Path $repo $project) @options
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $project" }
