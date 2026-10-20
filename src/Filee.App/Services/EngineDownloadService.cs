@@ -118,8 +118,10 @@ public sealed partial class EnginePackageState : ObservableObject
     /// <summary>The user chose this copy ("Stop using it" applies).</summary>
     public bool UsesOwnCopy => Status == EnginePackageStatus.OwnCopy && !FromSystem;
     public bool ShowsCopyFolder => Status == EnginePackageStatus.OwnCopy;
-    public bool CanUseOwnCopy => Status is EnginePackageStatus.NotInstalled or EnginePackageStatus.Failed or EnginePackageStatus.Installed
-                                 || (Status == EnginePackageStatus.OwnCopy && FromSystem);
+    // Mandarina: only a package that is programs can be pointed at; the speech model is a data file.
+    public bool CanUseOwnCopy => EngineEnvironment.OwnCopyPrograms.ContainsKey(Package.Id)
+                                 && (Status is EnginePackageStatus.NotInstalled or EnginePackageStatus.Failed or EnginePackageStatus.Installed
+                                     || (Status == EnginePackageStatus.OwnCopy && FromSystem));
     public bool IsBusy => Status is EnginePackageStatus.Queued or EnginePackageStatus.Downloading or EnginePackageStatus.Unpacking;
     /// <summary>Also when a copy on the PC is used: Filee's download is the tested version and wins once installed.</summary>
     public bool CanInstall => EngineDownloads.CanDownload(Package) && (Status is EnginePackageStatus.NotInstalled or EnginePackageStatus.Failed

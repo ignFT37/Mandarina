@@ -89,7 +89,9 @@ public sealed class RoutePlanner
 
             foreach (var (converter, edge, edgeCost) in EdgesFrom(node))
             {
-                if (edge.To == edge.From || (edge.ImageSourcesOnly && !imageSource) || (edge.NotForImageSources && imageSource))
+                // Mandarina: DirectOnly edges are never a step of a longer route, FirstStepOnly ones never come after another step.
+                if (edge.To == edge.From || (edge.ImageSourcesOnly && !imageSource) || (edge.NotForImageSources && imageSource)
+                    || (edge.DirectOnly && (node != from || edge.To != to)) || (edge.FirstStepOnly && node != from))
                     continue;
                 var next = cost + edgeCost;
                 if (dist.TryGetValue(edge.To, out var known) && known <= next)

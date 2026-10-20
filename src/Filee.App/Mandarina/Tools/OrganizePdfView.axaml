@@ -1,0 +1,101 @@
+<!-- Mandarina: the options of the PDF ORGANIZE panel: the action buttons, the grid of page thumbnails and the count line. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.OrganizePdfView"
+             x:DataType="t:OrganizePdfPanel"
+             Focusable="True">
+  <UserControl.Styles>
+    <!-- a page of the grid: thumbnail, its new number and, when it moved or was copied, where it came from -->
+    <Style Selector="Border.pcell">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="6,6,6,4" />
+      <Setter Property="Margin" Value="2" />
+    </Style>
+    <Style Selector="Border.pcell:pointerover">
+      <Setter Property="Background" Value="#0FFF5200" />
+    </Style>
+    <Style Selector="Border.pcell.selected">
+      <Setter Property="BorderBrush" Value="#FF5200" />
+      <Setter Property="Background" Value="#1FFF5200" />
+    </Style>
+    <Style Selector="Border.pcell.ghost">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="12" IsEnabled="{Binding IsIdle}">
+      <!-- what to do with the selected pages -->
+      <WrapPanel ItemSpacing="6" LineSpacing="6">
+        <Button Classes="pchip" Click="OnRotateLeft" IsEnabled="{Binding HasSelection}" Content="{DynamicResource panel.organizePDF.rotate_left}" />
+        <Button Classes="pchip" Click="OnRotateRight" IsEnabled="{Binding HasSelection}" Content="{DynamicResource panel.organizePDF.rotate_right}" />
+        <Button Classes="pchip" Click="OnDuplicate" IsEnabled="{Binding HasSelection}" Content="{DynamicResource panel.organizePDF.duplicate}" />
+        <Button Classes="pchip" Click="OnRemove" IsEnabled="{Binding HasSelection}" Content="{DynamicResource panel.organizePDF.remove}" />
+        <Button Classes="pchip" Click="OnMoveBack" IsEnabled="{Binding HasSelection}" Content="{DynamicResource panel.organizePDF.move_back}" />
+        <Button Classes="pchip" Click="OnMoveForward" IsEnabled="{Binding HasSelection}" Content="{DynamicResource panel.organizePDF.move_forward}" />
+        <Button Classes="pchip" Click="OnSelectAll" IsEnabled="{Binding HasPages}" Content="{DynamicResource panel.organizePDF.select_all}" />
+      </WrapPanel>
+
+      <!-- the pages -->
+      <Border Classes="pwell" Height="424" ToolTip.Tip="{DynamicResource panel.organizePDF.hint}">
+        <Panel>
+          <ScrollViewer x:Name="PageScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <Panel x:Name="PageCanvas">
+              <ItemsControl x:Name="PageList" ItemsSource="{Binding Items}" HorizontalAlignment="Center" Margin="4,6">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:OrganizePage">
+                    <Border Classes="pcell" Classes.selected="{Binding IsSelected}" Classes.ghost="{Binding IsGhost}">
+                      <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <t:PageThumbnailBox Source="{Binding Thumbnail}" Turn="{Binding Turn}" Aspect="{Binding Aspect}" HorizontalAlignment="Center" />
+                        <TextBlock Classes="pvalue" Text="{Binding Order}" FontSize="13" HorizontalAlignment="Center" />
+                        <Panel Height="14">
+                          <TextBlock Classes="plabel" Text="{Binding Origin}" FontSize="10.5" IsVisible="{Binding ShowOrigin}" HorizontalAlignment="Center" />
+                        </Panel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <!-- where a dragged page would land -->
+              <Border x:Name="DropMarker" IsVisible="False" IsHitTestVisible="False" Width="4" CornerRadius="2" Background="#FF5200"
+                      HorizontalAlignment="Left" VerticalAlignment="Top" />
+            </Panel>
+          </ScrollViewer>
+          <TextBlock Text="{DynamicResource panel.organizePDF.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Classes="plabel" IsVisible="{Binding IsReading}" />
+          <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                     TextAlignment="Center" Margin="32" Classes="plabel"
+                     IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </Panel>
+      </Border>
+
+      <!-- file · count · history -->
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" MinHeight="38">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Classes="pvalue" Text="{Binding CountText}" VerticalAlignment="Center"
+                       IsVisible="{Binding CountText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Classes="plabel" Text="{Binding FileName}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBlock Classes="plabel" Foreground="#D13A12" Text="{DynamicResource panel.organizePDF.empty}" TextWrapping="Wrap"
+                     MaxWidth="380" HorizontalAlignment="Left" IsVisible="{Binding NoPagesLeft}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+          <Button Classes="pchip" Click="OnUndo" IsEnabled="{Binding CanUndo}" Content="{DynamicResource panel.organizePDF.undo}" ToolTip.Tip="Ctrl+Z" />
+          <Button Classes="pchip" Click="OnRedo" IsEnabled="{Binding CanRedo}" Content="{DynamicResource panel.organizePDF.redo}" ToolTip.Tip="Ctrl+Y" />
+          <Button Classes="pchip" Click="OnReset" IsEnabled="{Binding HasChanges}" Content="{DynamicResource panel.organizePDF.reset}" />
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

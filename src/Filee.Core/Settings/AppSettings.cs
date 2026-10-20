@@ -17,7 +17,7 @@ public sealed class ThemeSettings
     public ThemeMode Mode { get; set; } = ThemeMode.System;
 
     /// <summary>Accent colour as <c>#RRGGBB</c>.</summary>
-    public string Accent { get; set; } = "#7F77DD";
+    public string Accent { get; set; } = "#F35B28";
 
     /// <summary>Base corner radius in pixels. Larger = "softer" UI.</summary>
     public double CornerRadius { get; set; } = 16;
@@ -35,13 +35,16 @@ public sealed class ThemeSettings
 public sealed class DonutSettings
 {
     /// <summary>Outer radius in logical pixels.</summary>
-    public double OuterRadius { get; set; } = 150;
+    public double OuterRadius { get; set; } = 124;
 
     /// <summary>Inner (hole) radius as a fraction of the outer radius (0.2 - 0.7).</summary>
-    public double HoleRatio { get; set; } = 0.42;
+    public double HoleRatio { get; set; } = 0.41;
 
     /// <summary>Background opacity of the slices (0.5 - 1).</summary>
     public double Opacity { get; set; } = 0.96;
+
+    /// <summary>Mandarina: a soft tick when the pointer reaches another slice.</summary>
+    public bool Sound { get; set; } = true;
 
     public DonutSettings Clone() => (DonutSettings)MemberwiseClone();
 }
@@ -89,8 +92,11 @@ public sealed class AppSettings
     public List<string> EnginePriority { get; set; } =
     [
         "magick", "pdfium", "pdfsharp", "rhwp", "unhwp", "markdown", "spreadsheet", "ooxml", "hwpx-writer", "docx-writer",
-        "pdf-text", "email", "data", "vector", "icns", "font", "cad", "model3d", "archive", "ebook", "subtitle", "ffmpeg",
-        "pandoc", "ghostscript", "calibre", "libreoffice",
+        "pdf-text", "pdf-slides", "email", "data", "vector", "icns", "font", "cad", "model3d", "archive", "ebook", "subtitle", "ffmpeg",
+        // Mandarina: "pdf-slides" (PDF → PPTX, from Filee's feature/pdf-to-pptx) and "office" (the Microsoft Office on the PC,
+        // before LibreOffice so it wins ties). Settings written before them list neither: an engine that is not in the list
+        // goes last, with the biggest priority penalty, so no schema bump is needed.
+        "pandoc", "ghostscript", "calibre", "office", "libreoffice",
     ];
 
     /// <summary>Set once the first-run welcome has been shown.</summary>
@@ -137,6 +143,12 @@ public sealed class AppSettings
     /// page breaks as Excel prints them.
     /// </summary>
     public bool LibreOfficeForSheets { get; set; }
+
+    /// <summary>
+    /// Mandarina: with Microsoft Office installed, Word, Excel and PowerPoint convert documents, spreadsheets and
+    /// presentations (Settings → Engines). Turn it off to leave Office alone and use the other engines.
+    /// </summary>
+    public bool OfficeEnabled { get; set; } = true;
 
     /// <summary>Every conversion keeps the created and modified dates of the original, whatever the preset says.</summary>
     public bool KeepFileDates { get; set; }

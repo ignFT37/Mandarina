@@ -1,0 +1,84 @@
+<!-- Mandarina: the options of the COMPRESS panel: what is being compressed (and what came out), how much (preset, percentage or a
+     size to land on) and, for photos and videos, how much smaller to make them. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.CompressView"
+             x:DataType="t:CompressPanel">
+  <StackPanel Spacing="12" VerticalAlignment="Top">
+    <!-- what is being compressed · the result -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="pvalue" Text="{Binding SummaryText}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Classes="pvalue" Foreground="{DynamicResource PanelOrange}" Text="{Binding ResultText}" IsVisible="{Binding HasResult}" />
+        <TextBlock Classes="plabel" Text="{Binding LoadError}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LoadError}" IsVisible="{Binding HasLoadError}" />
+        <TextBlock Classes="plabel" Foreground="#C23B00" Text="{Binding WarningText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding WarningText}" IsVisible="{Binding HasWarning}" />
+      </StackPanel>
+    </Border>
+
+    <!-- how much -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="14" IsVisible="{Binding ShowModes}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ToggleButton Classes="pchip" Content="{DynamicResource panel.compress.mode_preset}" IsChecked="{Binding IsPresetMode, Mode=OneWay}" Click="OnPresetMode" />
+            <ToggleButton Classes="pchip" Content="{DynamicResource panel.compress.mode_percent}" IsChecked="{Binding IsPercentMode, Mode=OneWay}" Click="OnPercentMode" />
+            <ToggleButton Classes="pchip" Content="{DynamicResource panel.compress.mode_target}" IsChecked="{Binding IsTargetMode, Mode=OneWay}" Click="OnTargetMode" />
+          </StackPanel>
+
+          <!-- one of the three, in a box as tall as the tallest so the cards below do not jump when the mode changes -->
+          <Grid MinHeight="92">
+            <!-- preset: four levels and what to expect of the one chosen -->
+            <StackPanel Spacing="10" IsVisible="{Binding IsPresetMode}">
+              <!-- the chips carry a 6 px bottom margin for the rows between them (a narrow window or a long language wraps); the last row gives it back -->
+              <ItemsControl ItemsSource="{Binding Presets}" Margin="0,0,0,-6">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:CompressPanelPreset">
+                    <ToggleButton Classes="pchip" Margin="0,0,6,6" Content="{Binding Label}" IsChecked="{Binding IsSelected, Mode=OneWay}" Click="OnPresetClick" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="plabel" Text="{Binding PresetHint}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- percentage -->
+            <p:SliderRow VerticalAlignment="Center" IsVisible="{Binding IsPercentMode}" Label="{DynamicResource panel.compress.quality}"
+                         Minimum="10" Maximum="100" Step="1" DefaultValue="70" ValueFormat="0'%'" Value="{Binding Percent, Mode=TwoWay}" />
+
+            <!-- target size -->
+            <StackPanel Spacing="8" IsVisible="{Binding IsTargetMode}">
+              <TextBlock Classes="plabel" Text="{Binding TargetLabel}" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Text="{Binding TargetText}" MaxLength="9" TextInput="OnTargetTextInput" />
+                <ComboBox Grid.Column="1" MinWidth="90" SelectedIndex="{Binding TargetUnit}">
+                  <ComboBoxItem Content="KB" />
+                  <ComboBoxItem Content="MB" />
+                </ComboBox>
+              </Grid>
+              <TextBlock Classes="plabel" Text="{DynamicResource panel.compress.target_hint}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.compress.lossless_some}" TextWrapping="Wrap" IsVisible="{Binding ShowLosslessSome}" />
+        </StackPanel>
+
+        <!-- WAV, AIFF and FLAC: nothing to choose -->
+        <TextBlock Classes="pvalue" Text="{DynamicResource panel.compress.lossless}" IsVisible="{Binding IsLosslessAudio}" />
+      </StackPanel>
+    </Border>
+
+    <!-- smaller too (photos: longest side, videos: height) -->
+    <Border Classes="pcard" IsVisible="{Binding CanResize}">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="plabel" VerticalAlignment="Center" Text="{Binding ResizeLabel}" />
+        <ComboBox Grid.Column="1" MinWidth="140" ItemsSource="{Binding ResizeChoices}" SelectedIndex="{Binding ResizeIndex}" />
+      </Grid>
+    </Border>
+  </StackPanel>
+</UserControl>

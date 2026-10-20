@@ -28,7 +28,7 @@ public sealed class UserDataStore
 
     /// <summary>Default data directory: %APPDATA%\Filee on Windows, ~/Library/Application Support/Filee on macOS.</summary>
     public static string DefaultDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Filee");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Mandarina");
 
     public string Directory { get; }
 

@@ -1,0 +1,103 @@
+<!-- Mandarina: the options of the video SPLIT panel: the frame and the film strip with the cut flags on the left; "add a cut
+     here", the cuts as pills, "split evenly" and the clips that come out on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.SplitVideoView"
+             x:DataType="t:SplitVideoPanel">
+  <UserControl.Styles>
+    <!-- the small ✕ in a cut pill -->
+    <Style Selector="Button.pcross">
+      <Setter Property="Foreground" Value="{DynamicResource PanelMuted}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border x:Name="Bg" Width="20" Height="20" CornerRadius="10" Background="Transparent">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.pcross:pointerover /template/ Border#Bg">
+      <Setter Property="Background" Value="#E3DAE6" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="*,310" ColumnSpacing="14">
+    <!-- the clip -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="12">
+        <t:VideoStageView />
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.splitVideo.hint}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- the cuts and the clips -->
+    <Border Grid.Column="1" Classes="pcard">
+      <StackPanel Spacing="14" IsEnabled="{Binding IsReady}">
+        <Button Classes="pchip primary" HorizontalAlignment="Stretch" Click="OnAddCut">
+          <TextBlock Text="{DynamicResource panel.splitVideo.add_cut}" Foreground="White" />
+        </Button>
+
+        <!-- the cuts -->
+        <StackPanel Spacing="6">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.splitVideo.cuts}" />
+          <ScrollViewer MaxHeight="74" VerticalScrollBarVisibility="Auto">
+            <Panel>
+              <ItemsControl ItemsSource="{Binding Cuts}" Margin="0,0,0,-6">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:SplitCut">
+                    <Border Background="#EFE9F0" CornerRadius="999" Padding="12,2,3,2" Margin="0,0,6,6">
+                      <StackPanel Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="{Binding Text}" FontSize="12.5" VerticalAlignment="Center" />
+                        <Button Classes="pcross" Click="OnRemoveCut" ToolTip.Tip="{DynamicResource panel.splitVideo.remove_cut}">
+                          <PathIcon Width="8" Height="8" Data="{StaticResource Icon.Close}" />
+                        </Button>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="plabel" Text="{DynamicResource panel.splitVideo.no_cuts}" TextWrapping="Wrap"
+                         IsVisible="{Binding !HasCuts}" />
+            </Panel>
+          </ScrollViewer>
+        </StackPanel>
+
+        <!-- N equal parts -->
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+          <t:VideoStepper Minimum="2" Maximum="20" Value="{Binding EvenParts, Mode=TwoWay}" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="pchip" HorizontalAlignment="Stretch" VerticalAlignment="Center" Click="OnSplitEvenly">
+            <TextBlock Text="{Binding EvenPartsText}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" />
+          </Button>
+        </Grid>
+
+        <!-- the clips -->
+        <StackPanel Spacing="6">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.splitVideo.clips}" />
+          <ScrollViewer MaxHeight="116" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Clips}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="t:SplitClip">
+                  <Grid ColumnDefinitions="24,*,Auto" Margin="0,0,10,5">
+                    <TextBlock Text="{Binding Number}" Classes="plabel" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Range}" FontSize="12.5" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Length}" Classes="pvalue" FontSize="12.5" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+
+        <CheckBox IsChecked="{Binding NoRecode}" HorizontalAlignment="Stretch">
+          <TextBlock Text="{DynamicResource panel.videoStage.no_recode}" TextWrapping="Wrap" FontSize="12.5" />
+        </CheckBox>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

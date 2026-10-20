@@ -36,6 +36,8 @@ public sealed class TriggerService : IDisposable
         _detector.DragEnded += (x, y) => Post(() => DragEnded?.Invoke(this, new GestureEventArgs(null, x, y)));
         _detector.HoldTriggered += (g, x, y) => Post(() => SelectionGesture?.Invoke(this, new GestureEventArgs(g, x, y)));
         _detector.KeyChordTriggered += (g, x, y) => Post(() => SelectionGesture?.Invoke(this, new GestureEventArgs(g, x, y)));
+        _detector.WheelRequested += g => Post(() => WheelRequested?.Invoke(this, new GestureEventArgs(g, LastCursor.X, LastCursor.Y)));
+        _detector.DragCancelled += () => Post(() => DragCancelled?.Invoke(this, EventArgs.Empty));
         _detector.HoldTimerRequested += (token, ms) =>
             _ = Task.Delay(ms).ContinueWith(_ => _detector.HoldElapsed(token), TaskScheduler.Default);
     }
@@ -48,6 +50,12 @@ public sealed class TriggerService : IDisposable
 
     /// <summary>A hold or keyboard gesture: open the donut for the file manager's current selection.</summary>
     public event EventHandler<GestureEventArgs>? SelectionGesture;
+
+    /// <summary>Another wheel's key was tapped while a wheel is open (Mandarina).</summary>
+    public event EventHandler<GestureEventArgs>? WheelRequested;
+
+    /// <summary>Esc during a drag gesture: Explorer cancels the drag, so the wheel closes.</summary>
+    public event EventHandler? DragCancelled;
 
     /// <summary>Last known cursor position (physical pixels).</summary>
     public (int X, int Y) LastCursor { get; private set; }

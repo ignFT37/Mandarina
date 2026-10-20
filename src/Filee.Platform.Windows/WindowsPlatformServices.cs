@@ -13,8 +13,8 @@ namespace Filee.Platform.Windows;
 public sealed class WindowsPlatformServices : IPlatformServices
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ContextMenuKey = @"Software\Classes\*\shell\Filee";
-    private const string AppName = "Filee";
+    private const string ContextMenuKey = @"Software\Classes\*\shell\Mandarina";
+    private const string AppName = "Mandarina";
 
     /// <summary>Window classes that belong to Explorer windows and the desktop.</summary>
     private static readonly HashSet<string> FileManagerClasses = new(StringComparer.Ordinal)
@@ -24,6 +24,20 @@ public sealed class WindowsPlatformServices : IPlatformServices
         "Progman",       // desktop
         "WorkerW",       // desktop (when wallpaper slideshow / Win+Tab created a WorkerW)
     };
+
+    public bool ShareFiles(IReadOnlyList<string> paths, nint ownerWindow, Action? closed = null) => MandarinaShare.Start(paths, closed); // Mandarina: the sheet has its own window, no owner needed
+
+    public bool FocusFolderInFileManager(string folder) => ExplorerFolders.TryBringToFront(folder); // Mandarina: Move shows its destination without piling up windows
+
+    public bool CopyFilesToClipboard(IReadOnlyList<string> paths) => MandarinaShell.CopyFiles(paths);
+
+    public void OpenTerminal(string folder) => MandarinaShell.OpenTerminal(folder);
+
+    public byte[]? CaptureScreen(int x, int y, int width, int height) => MandarinaShell.Capture(x, y, width, height);
+
+    public void PlaySound(byte[] wav) => MandarinaShell.Play(wav);
+
+    public void StopSound() => MandarinaShell.Stop();
 
     public void RaiseTopmost(nint windowHandle)
     {

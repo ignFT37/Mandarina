@@ -1,0 +1,37 @@
+<!-- Mandarina: the half of the video panels that is the same for all three: the file name and length, the big frame under the
+     cursor, the timeline with its film strip and the cursor's time. Bound to a VideoPanelBase. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.VideoStageView"
+             x:DataType="t:VideoPanelBase">
+  <StackPanel Spacing="10">
+    <!-- file name · length -->
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="12,0,0,0">
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.duration}" />
+        <TextBlock Classes="plabel" Text="{Binding DurationText}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- the frame under the cursor -->
+    <Border Classes="pwell" Height="250">
+      <Panel>
+        <Image Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
+        <TextBlock Text="{DynamicResource panel.videoStage.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Classes="plabel" IsVisible="{Binding IsLoading}" />
+        <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                   Margin="24" Classes="plabel" IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </Panel>
+    </Border>
+
+    <!-- the timeline -->
+    <t:VideoTimeline Height="68" Duration="{Binding Duration}" Start="{Binding Start, Mode=TwoWay}" End="{Binding End, Mode=TwoWay}"
+                     Position="{Binding Position, Mode=TwoWay}" Strip="{Binding Strip}" Markers="{Binding Markers}"
+                     ShowRange="{Binding ShowRange}" FrameRate="{Binding FrameRate}" />
+
+    <!-- the cursor's time -->
+    <TextBlock Classes="pvalue" HorizontalAlignment="Center" Text="{Binding PositionText}" />
+  </StackPanel>
+</UserControl>

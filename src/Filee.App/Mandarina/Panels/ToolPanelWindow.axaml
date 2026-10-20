@@ -1,0 +1,83 @@
+<!--
+  Mandarina: the window of a tool panel. Borderless and transparent, a rounded orange-to-lilac frame with the round ✕
+  top left, the title centred, the panel's options in the middle and Apply bottom right (the status line and a thin
+  progress bar sit to its left). Built by PanelHost; the options come from ToolPanel.CreateView().
+-->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="using:Filee.App.Mandarina.Panels"
+        x:Class="Filee.App.Mandarina.Panels.ToolPanelWindow"
+        x:DataType="p:ToolPanel"
+        Title="{Binding Title}"
+        Icon="avares://Filee/Assets/Icons/filee.ico"
+        WindowDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        RequestedThemeVariant="Light"
+        CanResize="False"
+        ShowInTaskbar="True"
+        WindowStartupLocation="Manual">
+  <Window.Styles>
+    <StyleInclude Source="avares://Filee/Mandarina/Panels/PanelStyles.axaml" />
+  </Window.Styles>
+
+  <Grid>
+    <Border x:Name="Shell" Classes="pshell" Margin="18">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="22,18,22,20">
+        <!-- ✕ · title -->
+        <Grid x:Name="Header" Grid.Row="0" ColumnDefinitions="30,*,30" Background="Transparent">
+          <Button Classes="pclose" Click="OnClose" ToolTip.Tip="{DynamicResource panel.close}"
+                  AutomationProperties.AutomationId="PanelClose" AutomationProperties.Name="{DynamicResource panel.close}">
+            <PathIcon Width="10" Height="10" Data="{StaticResource Icon.Close}" />
+          </Button>
+          <TextBlock Grid.Column="1" Classes="ptitle" Text="{Binding Title}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- the tool's options -->
+        <ContentControl x:Name="Host" Grid.Row="1" Margin="0,16,0,14" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+
+        <!-- status · Apply -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+          <StackPanel VerticalAlignment="Center" Spacing="6" Margin="2,0,16,0">
+            <!-- A wrap panel, not a horizontal stack: a stack measures the text without a width limit, so a long message (an error in
+                 a language with long words) ran under the Apply button in the narrower windows. -->
+            <WrapPanel Orientation="Horizontal">
+              <TextBlock Classes="pwhite" Text="{Binding Status}" TextWrapping="Wrap" MaxWidth="460" AutomationProperties.AutomationId="PanelStatus"
+                         IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <Button Classes="plink" Click="OnReveal" Content="{DynamicResource panel.show}" IsVisible="{Binding IsDone}" Margin="8,0,0,0" />
+            </WrapPanel>
+            <ProgressBar Classes="pprogress" Value="{Binding Progress}" Maximum="100" Width="260" HorizontalAlignment="Left"
+                         IsVisible="{Binding IsBusy}" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="papply" Click="OnApply" IsEnabled="{Binding CanRun}" VerticalAlignment="Center"
+                  AutomationProperties.AutomationId="PanelApply" AutomationProperties.Name="{DynamicResource panel.apply}">
+            <Panel>
+              <TextBlock Text="{DynamicResource panel.apply}" IsVisible="{Binding IsIdle}" />
+              <TextBlock Text="{DynamicResource panel.applying}" IsVisible="{Binding IsBusy}" />
+              <TextBlock Text="{DynamicResource panel.done}" IsVisible="{Binding IsDone}" />
+            </Panel>
+          </Button>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <!-- Esc or ✕ with unsaved work asks first (ToolPanelWindow.RequestClose); the frame under it is disabled meanwhile -->
+    <Border x:Name="UnsavedLayer" Margin="18" CornerRadius="26" Background="#992B2430" IsVisible="False"
+            AutomationProperties.AutomationId="PanelUnsaved">
+      <Border Classes="pcard" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400" Padding="26,22">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{DynamicResource panel.unsaved.title}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Classes="plabel" FontSize="13" Text="{DynamicResource panel.unsaved.text}" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button x:Name="UnsavedDiscard" Classes="pask" Click="OnDiscard" Content="{DynamicResource panel.unsaved.discard}"
+                    AutomationProperties.AutomationId="PanelUnsavedDiscard" AutomationProperties.Name="{DynamicResource panel.unsaved.discard}" />
+            <Button x:Name="UnsavedKeep" Classes="pask keep" Click="OnKeep" Content="{DynamicResource panel.unsaved.keep}"
+                    AutomationProperties.AutomationId="PanelUnsavedKeep" AutomationProperties.Name="{DynamicResource panel.unsaved.keep}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+</Window>

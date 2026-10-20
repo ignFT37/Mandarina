@@ -33,6 +33,7 @@ internal sealed class CliHost : IAsyncDisposable
         EngineEnvironment.LibreOfficeForHwp = store.Settings.LibreOfficeForHwp;
         EngineEnvironment.LibreOfficeForDocuments = store.Settings.LibreOfficeForDocuments;
         EngineEnvironment.LibreOfficeForSheets = store.Settings.LibreOfficeForSheets;
+        EngineEnvironment.OfficeEnabled = store.Settings.OfficeEnabled; // Mandarina: the Microsoft Office engine's switch
         var converters = EngineRegistry.CreateAll(new EngineEnvironment(store.Directory));
         var catalog = new ConverterCatalog(converters) { Priority = store.Settings.EnginePriority };
         var queue = new JobQueue(catalog, EngineRegistry.FindPdfMerger(converters), combiner: EngineRegistry.FindFileCombiner(converters),

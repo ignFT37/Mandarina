@@ -1,0 +1,182 @@
+<!--
+  Mandarina: the look of the tool panels: a warm orange-to-lilac gradient frame, white
+  glass cards for the options, round ✕ top left and a white "Apply" pill bottom right. Every class starts with "p" so
+  it never meets Filee's own (Border.card, Button.icon, …). Panels use:
+    Border.pcard      white card holding a group of options
+    TextBlock.plabel  small grey caption above a control inside a card;  TextBlock.pvalue  its value, bold
+    TextBlock.pwhite  small white text directly on the gradient
+    Button.pchip      grey pill button inside a card (Button.pchip.primary: orange);  ToggleButton.pchip: orange when on
+    Border.pwell      pale rounded area for a preview (waveform, image, frames)
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <LinearGradientBrush x:Key="PanelGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Offset="0" Color="#FF8E3A" />
+        <GradientStop Offset="0.55" Color="#F4707F" />
+        <GradientStop Offset="1" Color="#A98CEF" />
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="PanelOrange" Color="#FF5200" />
+      <SolidColorBrush x:Key="PanelInk" Color="#2B2430" />
+      <SolidColorBrush x:Key="PanelMuted" Color="#7C7482" />
+      <SolidColorBrush x:Key="PanelCardBrush" Color="#F2FFFFFF" />
+      <SolidColorBrush x:Key="PanelWellBrush" Color="#F4EFF4" />
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <!-- The frame -->
+  <Style Selector="Border.pshell">
+    <Setter Property="Background" Value="{DynamicResource PanelGradient}" />
+    <Setter Property="CornerRadius" Value="26" />
+    <Setter Property="BorderBrush" Value="#59FFFFFF" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BoxShadow" Value="0 16 44 0 #55301040" />
+  </Style>
+
+  <Style Selector="TextBlock.ptitle">
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.pwhite">
+    <Setter Property="Foreground" Value="#EEFFFFFF" />
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+
+  <!-- ✕ -->
+  <Style Selector="Button.pclose">
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="Bg" Width="30" Height="30" CornerRadius="15" Background="#3DFFFFFF">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.pclose:pointerover /template/ Border#Bg">
+    <Setter Property="Background" Value="#66FFFFFF" />
+  </Style>
+
+  <!-- Apply -->
+  <Style Selector="Button.papply">
+    <Setter Property="Foreground" Value="#E04A00" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="Bg" MinWidth="104" Height="38" CornerRadius="19" Background="White" Padding="22,0">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}"
+                            TextElement.Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.papply:pointerover /template/ Border#Bg">
+    <Setter Property="Background" Value="#FFF4EC" />
+  </Style>
+  <Style Selector="Button.papply:disabled /template/ Border#Bg">
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+
+  <!-- A link-like button on the gradient ("Show") -->
+  <Style Selector="Button.plink">
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="Transparent" Padding="4,2">
+          <ContentPresenter Content="{TemplateBinding Content}" TextElement.Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- Cards and wells -->
+  <Style Selector="Border.pcard">
+    <Setter Property="Background" Value="{DynamicResource PanelCardBrush}" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Padding" Value="18,16" />
+    <Setter Property="BoxShadow" Value="0 6 20 0 #22301040" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource PanelInk}" />
+  </Style>
+  <Style Selector="Border.pwell">
+    <Setter Property="Background" Value="{DynamicResource PanelWellBrush}" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="TextBlock.plabel">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource PanelMuted}" />
+  </Style>
+  <Style Selector="TextBlock.pvalue">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- Pills inside a card -->
+  <Style Selector="Button.pchip, ToggleButton.pchip">
+    <Setter Property="Foreground" Value="{DynamicResource PanelInk}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="Bg" CornerRadius="999" Background="#EFE9F0" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}"
+                            TextElement.Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.pchip:pointerover /template/ Border#Bg, ToggleButton.pchip:pointerover /template/ Border#Bg">
+    <Setter Property="Background" Value="#E3DAE6" />
+  </Style>
+  <Style Selector="Button.pchip:disabled /template/ Border#Bg, ToggleButton.pchip:disabled /template/ Border#Bg">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <Style Selector="Button.pchip.primary, ToggleButton.pchip:checked">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.pchip.primary /template/ Border#Bg, ToggleButton.pchip:checked /template/ Border#Bg">
+    <Setter Property="Background" Value="{DynamicResource PanelOrange}" />
+  </Style>
+  <Style Selector="Button.pchip.primary:pointerover /template/ Border#Bg, ToggleButton.pchip:checked:pointerover /template/ Border#Bg">
+    <Setter Property="Background" Value="#E64A00" />
+  </Style>
+
+  <!-- The pills of the "unsaved changes" question: the look of pchip, with classes of their own so that nothing that looks up a panel's pills finds them -->
+  <Style Selector="Button.pask">
+    <Setter Property="Foreground" Value="{DynamicResource PanelInk}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="Bg" CornerRadius="999" Background="#EFE9F0" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}"
+                            TextElement.Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.pask:pointerover /template/ Border#Bg">
+    <Setter Property="Background" Value="#E3DAE6" />
+  </Style>
+  <Style Selector="Button.pask.keep">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.pask.keep /template/ Border#Bg">
+    <Setter Property="Background" Value="{DynamicResource PanelOrange}" />
+  </Style>
+  <Style Selector="Button.pask.keep:pointerover /template/ Border#Bg">
+    <Setter Property="Background" Value="#E64A00" />
+  </Style>
+
+  <!-- Thin progress line under the status text -->
+  <Style Selector="ProgressBar.pprogress">
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Background" Value="#40FFFFFF" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+</Styles>

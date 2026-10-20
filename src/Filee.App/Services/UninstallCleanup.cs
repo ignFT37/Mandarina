@@ -11,14 +11,12 @@ internal static class UninstallCleanup
 {
     public static bool Run()
     {
-        IPlatformServices platform = OperatingSystem.IsWindows() ? new WindowsPlatformServices()
-            : OperatingSystem.IsMacOS() ? new MacOSPlatformServices()
-            : OperatingSystem.IsLinux() ? new LinuxPlatformServices() : new NullPlatformServices();
+        var platform = PlatformLayers.Create();
         var succeeded = true;
         Clean(() => platform.SetContextMenu(false, "", ""));
         Clean(() => platform.SetStartWithSystem(false, ""));
-        if (OperatingSystem.IsLinux() && platform is LinuxPlatformServices linux)
-            Clean(() => linux.SetThunarShortcut(null));
+        if (PlatformLayers.IsLinux(platform))
+            Clean(() => PlatformLayers.SetThunarShortcut(platform, null));
         if (OperatingSystem.IsWindows() && ExplorerMenuRegistration.IsSupportedOs)
         {
             Clean(() =>

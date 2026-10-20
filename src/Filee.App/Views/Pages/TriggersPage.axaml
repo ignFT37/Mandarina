@@ -54,7 +54,7 @@
                 </Border>
               </DockPanel>
 
-              <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,14,Auto">
+              <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,14,Auto,14,Auto">
                 <StackPanel>
                   <TextBlock Classes="label" Text="{DynamicResource triggers.kind}" />
                   <ComboBox ItemsSource="{Binding Kinds}" SelectedItem="{Binding Kind}" HorizontalAlignment="Stretch" />
@@ -94,6 +94,13 @@
                       <Button Classes="ghost" Content="{DynamicResource triggers.clear}" Command="{Binding ClearKeyCommand}" />
                     </StackPanel>
                   </StackPanel>
+                </StackPanel>
+
+                <!-- Mandarina: which wheel this gesture opens (convert, tools or actions) -->
+                <StackPanel Grid.Row="4">
+                  <TextBlock Classes="label" Text="{DynamicResource triggers.wheel}" />
+                  <ComboBox ItemsSource="{Binding Wheels}" SelectedItem="{Binding Wheel}" HorizontalAlignment="Stretch"
+                            AutomationProperties.AutomationId="TriggerWheel" />
                 </StackPanel>
               </Grid>
 

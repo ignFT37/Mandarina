@@ -88,6 +88,6 @@ public async Task Epub_to_pdf()
 
 Command line tools are pinned in `src/Filee.Engines/Infrastructure/engines.json` (URL, SHA-256, size, archive kind),
 which both `build/fetch-engines.ps1` and the app read. Small tools can be bundled with the installer (add the id to
-the `fetch-engines.ps1 -Only` list in `.github/workflows/release.yml`); large ones become an optional download by
+the `fetch-engines.ps1 -Only` list in `.github/workflows/ci.yml`); large ones become an optional download by
 adding an `EnginePackage` to `EngineDownloads.Packages` plus its name and description in the three `i18n/*.json`
 files. Either way, add a line to `THIRD-PARTY-NOTICES.md`.

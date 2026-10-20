@@ -126,6 +126,124 @@ public sealed class EngineInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task A_single_file_such_as_a_model_is_verified_and_kept_under_the_name_of_its_url()
+    {
+        // Mandarina: the speech model of the transcription tools is one 574 MB file, not an archive.
+        var weights = Encoding.UTF8.GetBytes("pretend these are the weights of a speech model");
+        var component = new EngineComponent("whisper", "large-v3-turbo-q5_0", "https://example.test/models/ggml-test-q5_0.bin",
+            Convert.ToHexString(SHA256.HashData(weights)), weights.Length, "file");
+        var server = new FakeServer(new() { [component.Url] = weights });
+        var installer = Installer(server, component);
+        var package = new EnginePackage("whisper", ["whisper"], 1000, []);
+
+        Assert.False(installer.IsInstalled(package));
+        await installer.InstallAsync(package, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(weights, await File.ReadAllBytesAsync(Path.Combine(_root, "whisper", "ggml-test-q5_0.bin"), TestContext.Current.CancellationToken));
+        Assert.True(installer.IsInstalled(package));
+        Assert.True(installer.IsUpToDate(package));
+        // The download was moved into place, and no staging folder is left.
+        Assert.Empty(Directory.GetFiles(Path.Combine(_root, ".downloads")));
+        Assert.Equal(["whisper"], Directory.GetDirectories(_root).Select(Path.GetFileName).Where(n => !n!.StartsWith(".downloads", StringComparison.Ordinal)));
+
+        installer.Uninstall(package);
+        Assert.False(Directory.Exists(Path.Combine(_root, "whisper")));
+    }
+
+    [Fact]
+    public async Task The_pinned_speech_model_downloads_from_its_real_address_and_matches_its_checksum()
+    {
+        // Mandarina: the real thing, 574 MB from Hugging Face (through its redirect to the CDN). Only when asked for.
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("MANDARINA_DOWNLOAD_TESTS") == "1", "set MANDARINA_DOWNLOAD_TESTS=1 to download 574 MB");
+        var http = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
+        var installer = new EngineInstaller(http, _root, EngineDownloads.Components);
+        var package = EngineDownloads.Packages.Single(p => p.Id == "whisper");
+
+        await installer.InstallAsync(package, null, TestContext.Current.CancellationToken);
+
+        var model = Assert.Single(Directory.GetFiles(Path.Combine(_root, "whisper"), "*.bin"));
+        Assert.Equal(EngineDownloads.Components["whisper"].Size, new FileInfo(model).Length);
+        Assert.True(installer.IsUpToDate(package));
+    }
+
+    [Fact]
+    public void The_small_speech_model_is_a_package_of_its_own_with_a_folder_of_its_own()
+    {
+        // Mandarina: a package replaces the whole folder of its component, so two models cannot share one: "whisper" is the
+        // large one, "whisper-small" the small one, each pinned to a file of the same repository and commit.
+        var package = EngineDownloads.Packages.Single(p => p.Id == "whisper-small");
+        var component = EngineDownloads.Components[Assert.Single(package.Components)];
+
+        Assert.Equal("whisper-small", component.Id);
+        Assert.Equal("file", component.Kind);
+        Assert.Equal("ggml-small-q8_0.bin", Path.GetFileName(new Uri(component.Url).AbsolutePath));
+        Assert.Matches("^https://huggingface.co/ggerganov/whisper.cpp/resolve/[0-9a-f]{40}/ggml-small-q8_0.bin$", component.Url);
+        Assert.Matches("^[0-9A-F]{64}$", component.Sha256);
+        Assert.Equal(264_464_607, component.Size);
+        Assert.Equal(component.Size, package.InstalledSize);
+        Assert.Empty(package.ConverterIds);
+        Assert.NotEqual(EngineDownloads.Components["whisper"].Sha256, component.Sha256);
+        Assert.DoesNotContain("whisper-small", EngineEnvironment.OwnCopyPrograms.Keys); // a data file: no program to point at
+    }
+
+    [Fact]
+    public async Task The_two_speech_models_install_and_uninstall_each_in_its_own_folder()
+    {
+        // The real packages and file names, with made-up files behind the addresses.
+        var large = Encoding.UTF8.GetBytes("pretend these are the weights of the large speech model");
+        var small = Encoding.UTF8.GetBytes("and these the weights of the small one");
+        EngineComponent Fake(string id, byte[] bytes)
+        {
+            var real = EngineDownloads.Components[id];
+            return real with { Url = "https://example.test/models/" + Path.GetFileName(new Uri(real.Url).AbsolutePath),
+                Sha256 = Convert.ToHexString(SHA256.HashData(bytes)), Size = bytes.Length };
+        }
+        var (largeComponent, smallComponent) = (Fake("whisper", large), Fake("whisper-small", small));
+        var installer = Installer(new FakeServer(new() { [largeComponent.Url] = large, [smallComponent.Url] = small }), largeComponent, smallComponent);
+        var largePackage = EngineDownloads.Packages.Single(p => p.Id == "whisper");
+        var smallPackage = EngineDownloads.Packages.Single(p => p.Id == "whisper-small");
+        var largeFile = Path.Combine(_root, "whisper", "ggml-large-v3-turbo-q5_0.bin");
+        var smallFile = Path.Combine(_root, "whisper-small", "ggml-small-q8_0.bin");
+
+        await installer.InstallAsync(smallPackage, null, TestContext.Current.CancellationToken);
+
+        Assert.True(installer.IsInstalled(smallPackage));
+        Assert.False(installer.IsInstalled(largePackage)); // the small one is not the large one
+        Assert.Equal(small, await File.ReadAllBytesAsync(smallFile, TestContext.Current.CancellationToken));
+        Assert.Equal(smallComponent.Sha256, File.ReadAllText(Path.Combine(_root, "whisper-small", ".filee-component"))); // the mark the local installer writes too
+
+        await installer.InstallAsync(largePackage, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(large, await File.ReadAllBytesAsync(largeFile, TestContext.Current.CancellationToken));
+        Assert.Equal(small, await File.ReadAllBytesAsync(smallFile, TestContext.Current.CancellationToken)); // installing the large one left the small one alone
+        Assert.True(installer.IsUpToDate(largePackage) && installer.IsUpToDate(smallPackage));
+
+        installer.Uninstall(smallPackage);
+
+        Assert.False(Directory.Exists(Path.Combine(_root, "whisper-small")));
+        Assert.True(File.Exists(largeFile));
+        Assert.False(installer.IsInstalled(smallPackage));
+        Assert.True(installer.IsUpToDate(largePackage));
+    }
+
+    [Fact]
+    public async Task The_pinned_small_speech_model_downloads_from_its_real_address_and_matches_its_checksum()
+    {
+        // Mandarina: the real thing, 264 MB from Hugging Face (through its redirect to the CDN). Only when asked for.
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("MANDARINA_DOWNLOAD_TESTS") == "1", "set MANDARINA_DOWNLOAD_TESTS=1 to download 264 MB");
+        var http = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
+        var installer = new EngineInstaller(http, _root, EngineDownloads.Components);
+        var package = EngineDownloads.Packages.Single(p => p.Id == "whisper-small");
+
+        await installer.InstallAsync(package, null, TestContext.Current.CancellationToken); // it checks the SHA-256 before it keeps the file
+
+        var model = Assert.Single(Directory.GetFiles(Path.Combine(_root, "whisper-small"), "*.bin"));
+        Assert.Equal("ggml-small-q8_0.bin", Path.GetFileName(model));
+        Assert.Equal(EngineDownloads.Components["whisper-small"].Size, new FileInfo(model).Length);
+        Assert.True(installer.IsUpToDate(package));
+    }
+
+    [Fact]
     public void Transfer_rate_averages_over_the_last_seconds_and_estimates_the_time_left()
     {
         var rate = new TransferRate(TimeSpan.FromSeconds(5));

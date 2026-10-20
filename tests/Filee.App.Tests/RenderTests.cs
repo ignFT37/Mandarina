@@ -468,8 +468,10 @@ public class RenderTests
         window.DonutControl.SetExternalHighlight(1);
         Pump();
 
-        Assert.Equal(10, vm.Items.Count); // with "Trace to SVG" and "Line art to SVG"
-        Assert.Equal("JPG 3개", vm.CenterTitle);
+        // Mandarina: the image targets without the files' own JPG, and the pill names the files' size (here
+        // "3 items": the paths don't exist).
+        Assert.Equal(7, vm.Items.Count);
+        Assert.Equal(AppHost.Get<Filee.Core.Localization.ILocalizer>().Format("wheel.items", 3), vm.CenterTitle);
         Save(window, "donut-images-ko.png");
         window.Close();
     }
@@ -1121,7 +1123,7 @@ public class RenderTests
 
     private static void Save(TopLevel window, string name)
     {
-        var frame = window.CaptureRenderedFrame();
+        using var frame = window.CaptureRenderedFrame(); // Mandarina: disposed, not left to the finalizer
         Assert.NotNull(frame);
         using var stream = File.Create(Path.Combine(TestServices.ScreenshotDirectory, name));
         frame.Save(stream, new Avalonia.Media.Imaging.PngBitmapEncoderOptions());

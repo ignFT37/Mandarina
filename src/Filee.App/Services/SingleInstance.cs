@@ -10,7 +10,7 @@ namespace Filee.App.Services;
 public sealed class SingleInstance : IDisposable
 {
     // string.GetHashCode() is randomized per process, so a stable hash is required for both processes to agree.
-    private static readonly string DefaultName = "Filee-" + Convert.ToHexString(
+    private static readonly string DefaultName = "Mandarina-" + Convert.ToHexString(
         System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Environment.UserName)))[..12];
     private readonly Mutex _mutex;
     private readonly string _name;

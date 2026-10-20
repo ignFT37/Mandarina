@@ -18,6 +18,7 @@ Filee chooses engines automatically. Settings → *Engines* shows their status, 
 | **HWPX writer** | built in | **DOCX (+ DOCM/DOTX/DOTM), XLSX (+ XLSM/XLTX), XLS, ODS, CSV, TSV, PPTX (+ PPTM/POTX/PPSX), PDF, HTML, EPUB, MOBI/AZW3, FB2, HWPX, TXT, Markdown → HWPX** (and with rhwp → PDF and images); ODT, RTF, reStructuredText, LaTeX → HWPX with Pandoc |
 | **DOCX writer** | built in | **HWPX (and HWP through rhwp), PDF, HTML, EPUB, MOBI/AZW3, FB2, Markdown, TXT, XLSX, XLS, ODS, CSV, PPTX (+ variants) → DOCX** |
 | PDF text | built in (PdfPig) | **PDF → TXT** (reading order, also two columns; no OCR) |
+| PDF slides | built in (PDFium, PdfPig) | **PDF → PPTX**: a picture of each page on its own slide (looks like the PDF, not editable), the page's text in the speaker notes |
 | E-mail | built in (MimeKit, MsgReader) | **EML, Outlook MSG → HTML** (headers + body, inline pictures), **TXT**, **ZIP** (the attachments); **MSG → EML** |
 | Data | built in (System.Text.Json, YamlDotNet, Tomlyn, System.Xml) | **JSON, JSON Lines, YAML, TOML, XML, CSV ↔ each other** (CSV for tables); **vCard ↔ CSV**; spreadsheets and contacts reach JSON / YAML / TOML / XML through CSV |
 | **E-books** | built in | **EPUB, MOBI/AZW/AZW3/PRC, FB2, HTMLZ, TXTZ → EPUB, HWPX (→ PDF), TXT, HTML, Markdown, FB2, HTMLZ, TXTZ**; HTML, Markdown, TXT, DOCX → EPUB/FB2/HTMLZ/TXTZ; HTML → TXT; comics CBZ/CBR/CB7/CBT/CBC → PDF, EPUB, CBZ; PDF → CBZ; AZW4 → PDF; **EPUB ↔ KEPUB** (Kobo) |
@@ -27,6 +28,7 @@ Filee chooses engines automatically. Settings → *Engines* shows their status, 
 | rhwp | bundled with the installer (`engines/rhwp`) | HWP/HWPX → PDF, **HWP → HWPX, HWPX → HWP** |
 | Archives (7-Zip) | bundled with the installer (`engines/7zip`, ~2.5 MB) + built-in readers | ZIP, 7Z, RAR, TAR (+ GZ/BZ2/XZ/Z/7Z/LZ), CAB, ISO, DMG, … **→ folder, ZIP, 7Z, TAR, TAR.GZ/BZ2/XZ**; ALZ, EGG, lzip read in-process; "Compress into one archive" for any files |
 | LibreOffice + H2Orestart + Java | **optional download** (~420 MB, 1.3 GB on disk) | older and rare formats only: DOC, XLS, PPT, RTF and OpenDocument → PDF and to each other, output as DOCX/ODT/ODS/ODP; HWP/HWPX → DOCX/ODT; read-only formats (see below) → PDF and their kind's editable formats; FODT, OpenDocument templates (OTT, OTS, OTP) and XLT out; SVG → EMF/WMF/ODG, a PDF page → SVG |
+| Microsoft Office (Mandarina) | **the Office installed on the PC**, driven through COM (Word, Excel, PowerPoint): optional, with its own switch | DOC, DOCX, RTF, ODT → PDF; PPT, PPTX, ODP → PDF; XLS, XLSX, ODS → PDF; DOC ↔ DOCX, PPT ↔ PPTX, XLS ↔ XLSX; PDF → DOCX with Word's reflow. Only for files that are Word, Excel or PowerPoint documents; see docs/mandarina/OFFICE.md |
 | Pandoc | **optional download** (~42 MB, 240 MB on disk) | Markdown ↔ DOCX/ODT/RTF, DOCX/ODT/HTML/RTF → Markdown, HTML ↔ DOCX/ODT, markup languages (reStructuredText, LaTeX, Org, AsciiDoc, Typst, MediaWiki, DocBook, Jupyter, Textile, man, OPML) ↔ Markdown/HTML/DOCX/ODT and each other (and → RTF, EPUB, TXT), Markdown and markup → PPTX slides |
 | Ghostscript | **optional download** (~20 MB, 31 MB on disk) | EPS/PS → PDF, PDF → EPS/PS, PostScript-based AI → PDF (images through PDF and PDFium) |
 | FFmpeg | **optional download** (~100 MB, 272 MB on disk) | **all video and audio**: video ↔ video (H.264, HEVC, AV1), video → animated GIF / APNG or a still frame, audio and subtitle extraction, audio ↔ audio (also APE, WavPack, TTA, DSD, DTS, ALAC, …), GIF, APNG and photos → MP4/WEBM/MOV, images → HEIC |
@@ -73,6 +75,12 @@ they can be installed or removed later in Settings → *Engines*. A conversion t
   zstd tarball, of which only `Library/bin` is unpacked (SharpCompress; `fetch-engines.ps1` uses Windows' `tar.exe`).
   Its fonts and resources are compiled into `gsdll64.dll`. The Microsoft C++ runtime it was built against
   (`vcruntime` component) is copied next to `gswin64c.exe`, so it runs on PCs without the VC++ Redistributable.
+- Mandarina's speech models are single files (`"kind": "file"`) from the whisper.cpp repository on Hugging Face, each pinned to a
+  commit and a SHA-256 and kept under its own file name in its own folder: `whisper` (Whisper large-v3-turbo q5_0, 574 MB, for
+  PCs with a dedicated graphics card) in `engines\whisper` and `whisper-small` (Whisper small q8_0, 264 MB, for PCs without one)
+  in `engines\whisper-small`. FFmpeg's `whisper` filter reads them (the Windows FFmpeg build includes the filter); no converter
+  uses them, only the TRANSCRIBE and SUBTITLES tools (`src/Filee.App/Mandarina/Tools/WhisperEngine.cs`, which picks the model
+  with `WhisperModels.For`).
 
 To bump a version, change `url`, `sha256` and `size` in engines.json together, run
 `pwsh build/fetch-engines.ps1`, test, and update `THIRD-PARTY-NOTICES.md`. When the LibreOffice team retires a
@@ -373,6 +381,35 @@ it. DOCX → DOCX is no edge; the Word variants are the Office Open XML engine's
 
 Password-protected PDFs fail with a clear message. Not converted: tables (their cells come out as paragraphs in
 reading order), vector drawings on text pages, form fields and annotations other than links.
+
+## PDF → PPTX
+
+> Mandarina: this engine and section come from Filee's feature/pdf-to-pptx branch (e52db60, not in upstream/main yet).
+
+`Pdf/PdfSlidesConverter.cs` turns a PDF into a PowerPoint deck of pictures: every page is rendered (PDFium, as for
+PDF → images) and becomes one picture on its own slide. The slides look exactly like the PDF but are **not
+editable**: there are no text boxes to change, the PDF's layout is not rebuilt. PDF → DOCX is the editable route.
+
+- **Slide size** is the first page's own size (an A4 portrait PDF gives A4 portrait slides, a PDF exported from a
+  16:9 deck gives 16:9 slides), within PowerPoint's limits of 1 to 56 inches a side. Every page, also one of another
+  size or orientation (pages turned in the PDF are shown turned), is fitted onto the slide without cropping and
+  centred on white.
+- **Resolution** is the preset's render DPI, at least 150 and at most 600; a page larger than 25 megapixels at that
+  resolution (a poster) is rendered at a lower one. The preset's page range picks the pages.
+- **Pictures** are JPEG at the preset's quality (90 by default, as the "PPTX (slides)" preset sets it). Pages are
+  rendered on white, as PDF viewers show them, so they have no transparency that would need PNG, and JPEG keeps a
+  long deck at a size that is easy to send (an A4 text page at 150 dpi is a few hundred KB).
+- **Speaker notes** hold the page's text, read like PDF → TXT (reading order, the invisible OCR layer of scans
+  included), so it can still be searched and copied. Pages without text get no notes; when PdfPig cannot read a PDF
+  that PDFium renders, the deck is written without notes.
+- The package (`Pdf/PictureDeckWriter.cs`) is written by hand: presentation, one slide master with a blank layout,
+  a theme, the slides with their pictures, a notes master and notes slides, and the document properties. The tests
+  validate it with the Open XML SDK and read it back with Filee's own PPTX reader.
+- The edge is `DirectOnly`: the route planner uses it only for a PDF converted to PPTX. A Word document or an image is
+  never turned into picture slides through PDF, and a picture deck is never a step towards ODP, PPSX or another
+  format (a test checks that every other pair of formats keeps its route).
+
+Password-protected PDFs fail with the same message as PDF → DOCX.
 
 ## Office Open XML variants
 

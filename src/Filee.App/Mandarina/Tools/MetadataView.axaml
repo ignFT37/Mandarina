@@ -1,0 +1,134 @@
+<!-- Mandarina: the options of the METADATA panel: the two pills (Edit · Remove all); under Edit the fields of the kind of file in
+     cards of three columns, each field with the value the files have and a ✕ to remove it; under Remove all what will happen and,
+     for audio and video that have one, whether the cover goes too. Notices (recoded formats, tags that are not kept…) sit at the
+     bottom. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.MetadataView"
+             x:DataType="t:MetadataPanel">
+  <UserControl.Styles>
+    <!-- the round ✕ / ↺ beside a field -->
+    <Style Selector="Button.pclear">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource PanelMuted}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border x:Name="Bg" CornerRadius="14" Background="#EFE9F0">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}"
+                              TextElement.Foreground="{TemplateBinding Foreground}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.pclear:pointerover /template/ Border#Bg">
+      <Setter Property="Background" Value="#E3DAE6" />
+    </Style>
+    <!-- a text that cannot be written as typed -->
+    <Style Selector="TextBox.invalid /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#D9363E" />
+    </Style>
+    <Style Selector="TextBox.invalid:focus /template/ Border#PART_BorderElement">
+      <Setter Property="BorderBrush" Value="#D9363E" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="10" VerticalAlignment="Top">
+
+    <!-- Edit · Remove all · what is being changed -->
+    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+      <t:MetadataModeButton Classes="pchip" IsChecked="{Binding IsEditMode}" Content="{DynamicResource panel.removeMetadata.mode_edit}" />
+      <t:MetadataModeButton Grid.Column="1" Classes="pchip" IsChecked="{Binding IsRemoveMode}" Content="{DynamicResource panel.removeMetadata.mode_remove}" />
+      <TextBlock Grid.Column="2" Classes="pwhite" Text="{Binding FileName}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                 TextTrimming="CharacterEllipsis" />
+    </Grid>
+
+    <!-- loading · cannot read -->
+    <Border Classes="pcard" IsVisible="{Binding ShowLoading}">
+      <TextBlock Classes="plabel" Text="{DynamicResource panel.removeMetadata.loading}" />
+    </Border>
+    <Border Classes="pcard" IsVisible="{Binding ShowError}">
+      <TextBlock Text="{Binding LoadError}" TextWrapping="Wrap" />
+    </Border>
+
+    <!-- Edit: one card per group of fields -->
+    <ItemsControl ItemsSource="{Binding Groups}" IsVisible="{Binding ShowEdit}" IsEnabled="{Binding !EditUnavailable}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Spacing="8" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="t:MetadataGroup">
+          <Border Classes="pcard" Padding="16,12,16,8">
+            <StackPanel Spacing="2">
+              <ItemsControl ItemsSource="{Binding Fields}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <t:MetadataFlowPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:MetadataField">
+                    <StackPanel Spacing="2" Margin="0,0,0,4">
+                      <TextBlock Classes="plabel" Text="{Binding Label}" />
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <TextBox Text="{Binding Text, Mode=TwoWay}" PlaceholderText="{Binding Placeholder}" IsEnabled="{Binding CanEnterText}"
+                                 Classes.invalid="{Binding ErrorKey, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <!-- the room of the ✕ is kept even when there is nothing to remove, so the boxes line up -->
+                        <Panel Grid.Column="1" Width="28" Height="28">
+                          <Button Classes="pclear" Command="{Binding ToggleRemovedCommand}" IsVisible="{Binding CanClear}"
+                                  ToolTip.Tip="{DynamicResource panel.removeMetadata.clear}">
+                            <PathIcon Width="9" Height="9"
+                                      Data="M5.3 3.9 L12 10.6 L18.7 3.9 L20.1 5.3 L13.4 12 L20.1 18.7 L18.7 20.1 L12 13.4 L5.3 20.1 L3.9 18.7 L10.6 12 L3.9 5.3 Z" />
+                          </Button>
+                          <Button Classes="pclear" Command="{Binding ToggleRemovedCommand}" IsVisible="{Binding Removed}"
+                                  ToolTip.Tip="{DynamicResource panel.removeMetadata.undo}">
+                            <TextBlock Text="↺" FontSize="15" />
+                          </Button>
+                        </Panel>
+                      </Grid>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- the position · the tags that cannot be edited -->
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding HasLocation}" Margin="0,0,0,4">
+                <Button Classes="pchip" Command="{Binding Panel.RemoveLocationNowCommand}" IsEnabled="{Binding Panel.CanRemoveLocation}"
+                        Content="{DynamicResource panel.removeMetadata.remove_location}" />
+                <TextBlock Grid.Column="1" Classes="plabel" VerticalAlignment="Center" HorizontalAlignment="Right" Text="{Binding Panel.MoreTagsText}" />
+              </Grid>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Classes="pwhite" Text="{Binding MoreTagsText}" IsVisible="{Binding !HasLocationFields}" HorizontalAlignment="Right" />
+    <TextBlock Classes="pwhite" Text="{Binding ValidationMessage}" FontWeight="SemiBold" TextWrapping="Wrap"
+               IsVisible="{Binding ValidationMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+    <!-- Remove all -->
+    <Border Classes="pcard" IsVisible="{Binding ShowRemove}">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{DynamicResource panel.removeMetadata.remove_text}" TextWrapping="Wrap" />
+        <TextBlock Classes="pvalue" Text="{Binding TagsText}" IsVisible="{Binding TagsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Classes="plabel" Text="{Binding KeepText}" TextWrapping="Wrap" />
+        <CheckBox IsChecked="{Binding RemoveCover}" Content="{DynamicResource panel.removeMetadata.remove_cover}" IsVisible="{Binding ShowCoverOption}" />
+      </StackPanel>
+    </Border>
+
+    <!-- notices -->
+    <ItemsControl ItemsSource="{Binding Notices}" IsVisible="{Binding HasNotices}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Classes="pwhite" Text="{Binding}" TextWrapping="Wrap" Margin="2,0,0,3" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

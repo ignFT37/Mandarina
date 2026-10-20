@@ -39,7 +39,7 @@
           <StackPanel Orientation="Horizontal" Spacing="10">
             <Border Width="34" Height="34" CornerRadius="999" Background="{Binding AccentBrush}" />
             <TextBlock Classes="label" VerticalAlignment="Center" Text="{DynamicResource theme.custom_color}" Margin="0" />
-            <TextBox Text="{Binding AccentHex}" Width="120" PlaceholderText="#7F77DD" />
+            <TextBox Text="{Binding AccentHex}" Width="120" PlaceholderText="#F35B28" />
           </StackPanel>
         </StackPanel>
       </Border>

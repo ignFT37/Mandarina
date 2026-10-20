@@ -1,0 +1,94 @@
+<!-- Mandarina: the options of the video SNAPSHOT panel: the frame and the film strip on the left; on the right the two ways to
+     choose frames: pick them one by one (small thumbnails with their time) or one every N seconds between the handles. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.VideoSnapshotsView"
+             x:DataType="t:VideoSnapshotsPanel">
+  <UserControl.Styles>
+    <!-- the round ✕ on a thumbnail -->
+    <Style Selector="Button.pshot">
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border x:Name="Bg" Width="18" Height="18" CornerRadius="9" Background="#99000000">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.pshot:pointerover /template/ Border#Bg">
+      <Setter Property="Background" Value="#CC000000" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="*,310" ColumnSpacing="14">
+    <!-- the clip -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="12">
+        <t:VideoStageView />
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.videoSnapshots.hint_pick}" TextWrapping="Wrap" IsVisible="{Binding IsPickMode}" />
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.videoSnapshots.hint_interval}" TextWrapping="Wrap" IsVisible="{Binding IsIntervalMode}" />
+      </StackPanel>
+    </Border>
+
+    <!-- the snapshots -->
+    <Border Grid.Column="1" Classes="pcard">
+      <StackPanel Spacing="14" IsEnabled="{Binding IsReady}">
+        <!-- how to choose -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+          <ToggleButton Classes="pchip" Padding="8,6" HorizontalAlignment="Stretch" IsChecked="{Binding IsPickMode, Mode=OneWay}" Click="OnPickMode">
+            <TextBlock Text="{DynamicResource panel.videoSnapshots.mode_pick}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" />
+          </ToggleButton>
+          <ToggleButton Grid.Column="1" Classes="pchip" Padding="8,6" HorizontalAlignment="Stretch" IsChecked="{Binding IsIntervalMode, Mode=OneWay}" Click="OnIntervalMode">
+            <TextBlock Text="{DynamicResource panel.videoSnapshots.mode_interval}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" />
+          </ToggleButton>
+        </Grid>
+
+        <!-- frames one by one -->
+        <StackPanel Spacing="12" IsVisible="{Binding IsPickMode}">
+          <Button Classes="pchip primary" HorizontalAlignment="Stretch" Click="OnCapture">
+            <TextBlock Text="{DynamicResource panel.videoSnapshots.capture}" Foreground="White" />
+          </Button>
+          <Panel>
+            <ScrollViewer MaxHeight="256" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding Captures}" Margin="0,0,0,-8">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="t:SnapshotItem">
+                    <Border Classes="pwell" CornerRadius="9" Width="82" Margin="0,0,8,8">
+                      <Grid RowDefinitions="Auto,Auto">
+                        <Image Height="46" Source="{Binding Thumb}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <Button Classes="pshot" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,3,0" Click="OnRemoveCapture"
+                                ToolTip.Tip="{DynamicResource panel.videoSnapshots.remove}">
+                          <PathIcon Width="7" Height="7" Data="{StaticResource Icon.Close}" />
+                        </Button>
+                        <TextBlock Grid.Row="1" Text="{Binding Text}" FontSize="11.5" HorizontalAlignment="Center" Margin="0,3,0,5" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.videoSnapshots.empty}" TextWrapping="Wrap"
+                       IsVisible="{Binding !HasCaptures}" />
+          </Panel>
+        </StackPanel>
+
+        <!-- every N seconds -->
+        <StackPanel Spacing="14" IsVisible="{Binding IsIntervalMode}">
+          <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.videoSnapshots.every}" VerticalAlignment="Center" />
+            <t:VideoStepper Grid.Column="1" Minimum="1" Maximum="60" Value="{Binding Interval, Mode=TwoWay}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Classes="plabel" Text="{DynamicResource panel.videoSnapshots.seconds}" VerticalAlignment="Center" />
+          </Grid>
+          <TextBlock Classes="pvalue" FontSize="16" Text="{Binding CountText}" TextWrapping="Wrap" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

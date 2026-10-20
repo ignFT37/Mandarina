@@ -22,8 +22,21 @@ namespace Filee.Core.Conversion;
 /// The opposite: never used in routes that start from a raster image. PDF → SVG through LibreOffice keeps a PDF's
 /// vectors, but a photo that became a PDF would only come back as a picture inside an SVG, so images are traced.
 /// </param>
+/// <param name="DirectOnly">
+/// Mandarina (the same flag as Filee's feature/pdf-to-pptx branch): the edge is a route of its own only. The file
+/// being converted is a <paramref name="From"/> file and <paramref name="To"/> is what the user asked for. PDF → PPTX
+/// puts pictures of the pages on slides, and PDF → DOCX through Word's reflow is slow: neither may be a step of a
+/// longer route (a Word document rendered to PDF must not become pictures on slides).
+/// </param>
+/// <param name="FirstStepOnly">
+/// Mandarina: the edge is used only for the file the user dropped, never after another step: its <paramref name="From"/>
+/// is the format of the file itself. The Microsoft Office engine uses it: Word renders a Word document, but a
+/// spreadsheet that the DOCX writer turned into DOCX, or a Markdown file that went through slides, must not be sent to
+/// Word or PowerPoint just because that is the cheapest way to a PDF when nothing else is installed.
+/// </param>
 public readonly record struct ConversionEdge(
-    string From, string To, int Cost = 10, bool ImageSourcesOnly = false, bool NotForImageSources = false);
+    string From, string To, int Cost = 10, bool ImageSourcesOnly = false, bool NotForImageSources = false, bool DirectOnly = false,
+    bool FirstStepOnly = false);
 
 /// <summary>Whether an engine can currently be used.</summary>
 /// <param name="IsAvailable">True if conversions can run.</param>

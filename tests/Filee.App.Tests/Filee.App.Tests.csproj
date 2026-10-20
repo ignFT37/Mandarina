@@ -14,9 +14,22 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Avalonia.Headless.XUnit" />
+    <PackageReference Include="System.Speech" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+
+  <!-- Mandarina: a real HEIC written by Windows' HEIF encoder, read by the photo tests (the others are made while testing: HeicSamples). -->
+  <ItemGroup>
+    <None Update="Fixtures\heic\*.heic" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Mandarina: the media tests need the engines (FFmpeg, 7-Zip) next to the test binaries. A copy of the engines lives in
+       %USERPROFILE%\.mandarina\engines (fetch-engines.ps1); link it into every test output folder, whichever build root. -->
+  <Target Name="MandarinaLinkEngines" AfterTargets="Build"
+          Condition="$([MSBuild]::IsOSPlatform('Windows')) And Exists('$(USERPROFILE)\.mandarina\engines') And !Exists('$(OutDir)engines')">
+    <Exec Command="cmd /c mklink /J &quot;$(OutDir)engines&quot; &quot;$(USERPROFILE)\.mandarina\engines&quot;" StandardOutputImportance="low" />
+  </Target>
 </Project>

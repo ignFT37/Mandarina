@@ -1,13 +1,9 @@
-# Build, test and style check on every push and pull request.
+# Build, test and style check. Mandarina: manual for now (Actions > CI > Run workflow); Filee's trigger on every push and pull
+# request, and its Linux/macOS package job, are not used here until the Mandarina tests have been proven on a hosted runner.
 name: CI
 
-# Changes to documentation only (Markdown, docs/) skip the build and tests.
 on:
-  push:
-    branches: [main]
-    paths-ignore: ['**/*.md', 'docs/**']
-  pull_request:
-    paths-ignore: ['**/*.md', 'docs/**']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,9 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  portable:
-    uses: ./.github/workflows/portable.yml
-
   build:
     runs-on: windows-latest
     steps:

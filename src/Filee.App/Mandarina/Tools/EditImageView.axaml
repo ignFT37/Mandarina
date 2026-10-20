@@ -1,0 +1,121 @@
+<!-- Mandarina: the options of the photo EDIT panel: the preview with "hold to compare" on the left; on the right a card with four
+     groups of sliders (light, colour, detail, effects), Auto and Reset. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.EditImageView"
+             x:DataType="t:EditImagePanel">
+  <Grid ColumnDefinitions="*,360" ColumnSpacing="14">
+
+    <!-- the photo, and the button that shows the original while it is held -->
+    <StackPanel Spacing="10" VerticalAlignment="Top">
+      <Border Classes="pwell" Height="452">
+        <Panel>
+          <Image Source="{Binding Shown}" Stretch="Uniform" Margin="10" RenderOptions.BitmapInterpolationMode="HighQuality" />
+          <TextBlock Text="{DynamicResource panel.editImage.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Classes="plabel" IsVisible="{Binding IsLoading}" />
+          <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                     Margin="24" Classes="plabel" IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Text="{Binding PreviewError}" HorizontalAlignment="Center" VerticalAlignment="Bottom" TextWrapping="Wrap"
+                     Margin="14" Classes="plabel" IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </Panel>
+      </Border>
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+        <Button x:Name="CompareButton" Classes="pchip" IsEnabled="{Binding Original, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <PathIcon Width="14" Height="14"
+                      Data="F0 M12 5 C6.5 5 2.5 9 1 12 C2.5 15 6.5 19 12 19 C17.5 19 21.5 15 23 12 C21.5 9 17.5 5 12 5 Z M12 8.5 A3.5 3.5 0 1 0 12 15.5 A3.5 3.5 0 1 0 12 8.5 Z" />
+            <TextBlock Text="{DynamicResource panel.editImage.compare}" />
+          </StackPanel>
+        </Button>
+        <TextBlock Grid.Column="1" Classes="plabel" VerticalAlignment="Center" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+      </Grid>
+    </StackPanel>
+
+    <!-- the controls -->
+    <Border Grid.Column="1" Classes="pcard" Padding="16,14" IsEnabled="{Binding LoadError, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+
+        <!-- the four groups -->
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+          <t:EditTabButton Classes="pchip" HorizontalAlignment="Stretch" IsChecked="{Binding IsLightTab}"
+                        Content="{DynamicResource panel.editImage.tab_light}" />
+          <t:EditTabButton Grid.Column="1" Classes="pchip" HorizontalAlignment="Stretch" IsChecked="{Binding IsColorTab}"
+                        Content="{DynamicResource panel.editImage.tab_color}" />
+          <t:EditTabButton Grid.Column="2" Classes="pchip" HorizontalAlignment="Stretch" IsChecked="{Binding IsDetailTab}"
+                        Content="{DynamicResource panel.editImage.tab_detail}" />
+          <t:EditTabButton Grid.Column="3" Classes="pchip" HorizontalAlignment="Stretch" IsChecked="{Binding IsEffectsTab}"
+                        Content="{DynamicResource panel.editImage.tab_effects}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <Panel Margin="0,0,6,0">
+
+            <!-- light -->
+            <StackPanel Spacing="9" IsVisible="{Binding IsLightTab}">
+              <p:SliderRow Label="{DynamicResource panel.editImage.exposure}" Minimum="-2" Maximum="2" Step="0.05"
+                           ValueFormat="+0.00;-0.00;0.00" Value="{Binding Exposure}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.brightness}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Brightness}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.contrast}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Contrast}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.highlights}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Highlights}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.shadows}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Shadows}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.whites}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Whites}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.blacks}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Blacks}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.gamma}" Minimum="0.3" Maximum="3" Step="0.05" DefaultValue="1"
+                           ValueFormat="0.00" Value="{Binding Gamma}" />
+            </StackPanel>
+
+            <!-- colour -->
+            <StackPanel Spacing="9" IsVisible="{Binding IsColorTab}">
+              <p:SliderRow Label="{DynamicResource panel.editImage.saturation}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Saturation}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.vibrance}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Vibrance}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.temperature}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Temperature}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.tint}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Tint}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.hue}" Minimum="-180" Maximum="180"
+                           ValueFormat="+0°;-0°;0°" Value="{Binding Hue}" />
+            </StackPanel>
+
+            <!-- detail -->
+            <StackPanel Spacing="9" IsVisible="{Binding IsDetailTab}">
+              <p:SliderRow Label="{DynamicResource panel.editImage.sharpness}" Minimum="0" Maximum="100"
+                           ValueFormat="0" Value="{Binding Sharpness}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.clarity}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Clarity}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.noise}" Minimum="0" Maximum="100"
+                           ValueFormat="0" Value="{Binding NoiseReduction}" />
+            </StackPanel>
+
+            <!-- effects -->
+            <StackPanel Spacing="9" IsVisible="{Binding IsEffectsTab}">
+              <ToggleButton Classes="pchip" HorizontalAlignment="Left" Margin="0,2,0,8" IsChecked="{Binding BlackAndWhite}"
+                            Content="{DynamicResource panel.editImage.bw}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.sepia}" Minimum="0" Maximum="100"
+                           ValueFormat="0" Value="{Binding Sepia}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.vignette}" Minimum="-100" Maximum="100"
+                           ValueFormat="+0;-0;0" Value="{Binding Vignette}" />
+              <p:SliderRow Label="{DynamicResource panel.editImage.grain}" Minimum="0" Maximum="100"
+                           ValueFormat="0" Value="{Binding Grain}" />
+            </StackPanel>
+          </Panel>
+        </ScrollViewer>
+
+        <!-- auto · reset -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+          <ToggleButton Classes="pchip" IsChecked="{Binding Auto}" Content="{DynamicResource panel.editImage.auto}" />
+          <Button Classes="pchip" Click="OnReset" IsEnabled="{Binding IsEdited}" Content="{DynamicResource panel.editImage.reset}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

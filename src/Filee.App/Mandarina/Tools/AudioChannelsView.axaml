@@ -1,0 +1,50 @@
+<!-- Mandarina: the options of the CHANNELS panel: mono or stereo, the level of the left and the right side, and a line saying what comes out. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.AudioChannelsView"
+             x:DataType="t:AudioChannelsPanel">
+  <UserControl.Styles>
+    <!-- the line about a mono file made mono again -->
+    <Style Selector="TextBlock.notice">
+      <Setter Property="Foreground" Value="#C2410C" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="16">
+      <!-- file name · what it is now -->
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding SourceText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+      </Grid>
+
+      <StackPanel Spacing="14" IsEnabled="{Binding HasSource}">
+        <!-- mono or stereo -->
+        <Grid ColumnDefinitions="112,*">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.audioChannels.convert}" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+            <Button Classes="pchip" Classes.primary="{Binding ToMono}" Command="{Binding SetMonoCommand}"
+                    Content="{DynamicResource panel.audioChannels.mono}" />
+            <Button Classes="pchip" Classes.primary="{Binding IsStereo}" Command="{Binding SetStereoCommand}"
+                    Content="{DynamicResource panel.audioChannels.stereo}" />
+          </StackPanel>
+        </Grid>
+
+        <!-- the level of each side -->
+        <StackPanel Spacing="6">
+          <p:SliderRow Label="{DynamicResource panel.audioChannels.left}" Minimum="0" Maximum="200" DefaultValue="100"
+                       ValueFormat="0'%'" Value="{Binding Left}" />
+          <p:SliderRow Label="{DynamicResource panel.audioChannels.right}" Minimum="0" Maximum="200" DefaultValue="100"
+                       ValueFormat="0'%'" Value="{Binding Right}" />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- what comes out -->
+      <Border Classes="pwell" Padding="14,11" IsVisible="{Binding HasSource}">
+        <TextBlock Classes.notice="{Binding IsNotice}" Text="{Binding ResultText}" TextWrapping="Wrap" FontSize="12.5" />
+      </Border>
+      <TextBlock Classes="plabel" Text="{Binding LoadError}" TextWrapping="Wrap" Foreground="#C0392B" IsVisible="{Binding HasLoadError}" />
+    </StackPanel>
+  </Border>
+</UserControl>

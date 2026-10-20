@@ -157,6 +157,21 @@ public class JobQueueTests
         Assert.Equal("error.conversion_failed", job.Files[0].ErrorKey);
     }
 
+    // Mandarina: an engine can fail with a key of the i18n files, so the user reads why in their language.
+    [Fact]
+    public async Task An_engine_can_explain_its_failure_with_a_localization_key()
+    {
+        using var dir = new TempDir();
+        var failing = new FakeConverter("x", new ConversionEdge("jpg", "png")) { Failure = new ConversionFailureException("office.error.password", "a.docx") };
+        await using var queue = new JobQueue(new ConverterCatalog([failing]));
+
+        var job = await Run(queue, [dir.File("a.jpg")], new Preset { TargetFormat = "png" });
+
+        Assert.Equal(JobState.Failed, job.State);
+        Assert.Equal("office.error.password", job.Files[0].ErrorKey);
+        Assert.Equal("a.docx", job.Files[0].ErrorDetail);
+    }
+
     [Fact]
     public async Task Same_as_source_target_reencodes_in_place_format()
     {

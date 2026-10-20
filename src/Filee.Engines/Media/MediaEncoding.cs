@@ -192,9 +192,13 @@ internal static class MediaEncoding
         else if (CanCopyAudio(target, audio, options))
             args.AddRange(["-c:a", "copy"]);
         else
+        {
             args.AddRange(AudioCodecArguments(target, spec.AudioCodec, options, audio, inVideo: true));
+            if (options.Normalize)
+                args.AddRange(["-af", LoudnessFilter]);
+        }
 
-        args.AddRange(MetadataArguments());
+        args.AddRange(options.StripMetadata ? StripMetadataArguments : MetadataArguments());
         args.AddRange(ContainerArguments(target));
         // Sparse or late-starting streams (subtitles-like audio) otherwise fail with "too many packets buffered".
         args.AddRange(["-max_muxing_queue_size", "4096", "-f", spec.Muxer, "-progress", "pipe:1", output]);
@@ -271,7 +275,7 @@ internal static class MediaEncoding
     /// as they are.
     /// </summary>
     internal static bool CanCopyAudio(string target, AudioStreamInfo audio, MediaOptions options) =>
-        options.Quality != MediaQuality.Small && options.AudioBitrateKbps <= 0
+        options.Quality != MediaQuality.Small && options.AudioBitrateKbps <= 0 && !options.Normalize
         && (options.AudioChannels is not (1 or 2) || options.AudioChannels == audio.Channels)
         && Remuxable.TryGetValue(target, out var codecs) && audio.Codec is { } codec && codecs.Audio.Contains(codec);
 
@@ -423,6 +427,12 @@ internal static class MediaEncoding
         _ => [],
     };
 
+    /// <summary>Mandarina: no tags and no chapters from the source.</summary>
+    private static readonly string[] StripMetadataArguments = ["-map_metadata", "-1", "-map_chapters", "-1"];
+
+    /// <summary>Mandarina: single-pass EBU R128 loudness normalisation to −16 LUFS (streaming and podcasts).</summary>
+    internal const string LoudnessFilter = "loudnorm=I=-16:TP=-1.5:LRA=11";
+
     private static IEnumerable<string> MetadataArguments(int from = 0)
     {
         // Keep title, artist, dates, … (chapters are kept by default); an empty value removes a tag.
@@ -450,10 +460,17 @@ internal static class MediaEncoding
             args.AddRange(["-map", $"0:{cover}", "-c:v", "copy", "-disposition:v:0", "attached_pic"]);
         if (extras is { AttachmentFile: { } picture, AttachmentMime: { } mime })
             args.AddRange(["-attach", picture, "-metadata:s:t", "mimetype=" + mime, "-metadata:s:t", "filename=" + Path.GetFileName(picture)]);
-        var codec = AudioEncoder(target, spec.AudioCodec, options);
-        args.AddRange(AudioCodecArguments(target, codec, options, audio, inVideo: false));
-        args.AddRange(ChannelAndRateArguments(target, codec, options, audio.SampleRate));
-        args.AddRange(MetadataArguments(extras?.MetadataFile is null ? 0 : 1));
+        if (options.CopyAudio)
+            args.AddRange(["-c:a", "copy"]);
+        else
+        {
+            var codec = AudioEncoder(target, spec.AudioCodec, options);
+            args.AddRange(AudioCodecArguments(target, codec, options, audio, inVideo: false));
+            args.AddRange(ChannelAndRateArguments(target, codec, options, audio.SampleRate));
+            if (options.Normalize)
+                args.AddRange(["-af", LoudnessFilter]);
+        }
+        args.AddRange(options.StripMetadata ? StripMetadataArguments : MetadataArguments(extras?.MetadataFile is null ? 0 : 1));
         args.AddRange(ContainerArguments(target));
         args.AddRange(["-f", spec.Muxer, "-progress", "pipe:1", output]);
         return args;

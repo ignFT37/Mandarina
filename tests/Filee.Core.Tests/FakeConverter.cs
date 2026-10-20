@@ -16,10 +16,15 @@ internal sealed class FakeConverter(string id, params ConversionEdge[] edges) : 
 
     public bool Throw { get; set; }
 
+    /// <summary>Mandarina: the exception to throw instead of the generic one (an engine that explains its failure).</summary>
+    public Exception? Failure { get; set; }
+
     public EngineStatus GetStatus() => Available ? EngineStatus.Available() : EngineStatus.Unavailable("engine.reason.not_installed");
 
     public Task<IReadOnlyList<string>> ConvertAsync(ConversionStep step, IProgress<double>? progress, CancellationToken cancellationToken)
     {
+        if (Failure is not null)
+            throw Failure;
         if (Throw)
             throw new InvalidOperationException("boom");
 

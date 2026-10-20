@@ -3,6 +3,8 @@
 //   Filee.exe --background             start in the tray only (used by "start with Windows")
 //   Filee.exe --settings               open the main window
 //   Filee.exe --convert a b ...        open the donut for these files (Explorer context menu / Send To)
+//   Filee.exe --tools a b ...          Mandarina: the same, with the tools wheel open (--actions: the actions wheel)
+//   Filee.exe --panel <id> a b ...     Mandarina: open the panel of tool <id> (trimAudio, cropImage, …) for these files
 //   Filee.exe --convert-list <file>    same, with one path per line in a UTF-8 file (Windows 11 Explorer menu, for
 //                                      selections too long for a command line); the app deletes the file afterwards
 // Used by the installer (installer/Filee.iss):
@@ -31,7 +33,9 @@ public sealed record CommandLine(
     bool UninstallCleanup = false,
     IReadOnlyList<string>? InstallEngines = null,
     bool? StartWithWindows = null,
-    bool? ContextMenu = null)
+    bool? ContextMenu = null,
+    Filee.Core.Settings.WheelMode Wheel = Filee.Core.Settings.WheelMode.Convert,
+    string? PanelId = null)
 {
     /// <summary>File name prefix of list files written by FileeExplorerMenu.dll (LIST_PREFIX there) into %TEMP%.</summary>
     public const string ListFilePrefix = "Filee-convert-";
@@ -49,9 +53,19 @@ public sealed record CommandLine(
         List<string>? engines = null;
         bool? startWithWindows = null;
         bool? contextMenu = null;
+        var wheel = Filee.Core.Settings.WheelMode.Convert;
+        string? panel = null;
+        var expectPanel = false;
 
         foreach (var arg in args)
         {
+            if (expectPanel)
+            {
+                expectPanel = false;
+                panel = arg;
+                collecting = true;
+                continue;
+            }
             if (expectList)
             {
                 expectList = false;
@@ -87,6 +101,17 @@ public sealed record CommandLine(
                 case "--convert":
                     collecting = true;
                     break;
+                case "--panel":
+                    expectPanel = true;
+                    break;
+                case "--tools":
+                    collecting = true;
+                    wheel = Filee.Core.Settings.WheelMode.Tools;
+                    break;
+                case "--actions":
+                    collecting = true;
+                    wheel = Filee.Core.Settings.WheelMode.Actions;
+                    break;
                 case "--convert-list":
                     expectList = true;
                     break;
@@ -97,7 +122,7 @@ public sealed record CommandLine(
                     break;
             }
         }
-        return new CommandLine(background, settings, files, listFile, quit, cleanup, engines, startWithWindows, contextMenu);
+        return new CommandLine(background, settings, files, listFile, quit, cleanup, engines, startWithWindows, contextMenu, wheel, panel);
     }
 
     /// <summary>"--Name=Value" → ("--name", "Value"); "--name" → ("--name", null).</summary>

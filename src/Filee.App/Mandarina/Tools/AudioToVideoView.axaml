@@ -1,0 +1,80 @@
+<!-- Mandarina: the options of the VISUALIZE panel: a real frame of the video on the left, in the shape chosen; on the right the shape
+     (horizontal, vertical, square), the style (wave or bars) and the colours of the wave and of the background. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.AudioToVideoView"
+             x:DataType="t:AudioToVideoPanel">
+  <Grid ColumnDefinitions="*,380" ColumnSpacing="14">
+
+    <!-- the preview -->
+    <Border Classes="pcard">
+      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="12,0,0,0" IsVisible="{Binding !HasLoadError}">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.duration}" />
+            <TextBlock Classes="plabel" Text="{Binding DurationText}" />
+          </StackPanel>
+        </Grid>
+
+        <!-- the well takes the shape of the video inside a box that never changes, so the card does not jump from one shape to another -->
+        <Panel Grid.Row="1" MinHeight="300">
+          <Border Classes="pwell" Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Panel>
+              <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding ShowsPreview}" />
+              <TextBlock Classes="plabel" Text="{DynamicResource panel.audioToVideo.preview_loading}" HorizontalAlignment="Center"
+                         VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="16" IsVisible="{Binding ShowsHint}" />
+              <TextBlock Classes="plabel" Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         TextWrapping="Wrap" TextAlignment="Center" Margin="16" IsVisible="{Binding HasLoadError}" />
+              <TextBlock Classes="plabel" Text="{Binding PreviewError}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                         TextWrapping="Wrap" TextAlignment="Center" Margin="12,0,12,10" Foreground="#C0392B" IsVisible="{Binding HasPreviewError}" />
+            </Panel>
+          </Border>
+        </Panel>
+
+        <StackPanel Grid.Row="2" Spacing="3" HorizontalAlignment="Center" IsVisible="{Binding !HasLoadError}">
+          <TextBlock Classes="pvalue" Text="{Binding SizeText}" HorizontalAlignment="Center" FontSize="12.5" />
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.audioToVideo.preview_hint}" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- shape · style · colours -->
+    <Border Grid.Column="1" Classes="pcard" VerticalAlignment="Top" IsEnabled="{Binding !HasLoadError}">
+      <StackPanel Spacing="16">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.audioToVideo.format}" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Classes="pchip" Classes.primary="{Binding IsHorizontal}" Command="{Binding SetFormatCommand}"
+                    CommandParameter="{x:Static t:VisualFormat.Horizontal}" Content="{DynamicResource panel.audioToVideo.format_horizontal}" />
+            <Button Classes="pchip" Classes.primary="{Binding IsVertical}" Command="{Binding SetFormatCommand}"
+                    CommandParameter="{x:Static t:VisualFormat.Vertical}" Content="{DynamicResource panel.audioToVideo.format_vertical}" />
+            <Button Classes="pchip" Classes.primary="{Binding IsSquare}" Command="{Binding SetFormatCommand}"
+                    CommandParameter="{x:Static t:VisualFormat.Square}" Content="{DynamicResource panel.audioToVideo.format_square}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.audioToVideo.style}" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Classes="pchip" Classes.primary="{Binding IsWave}" Command="{Binding SetStyleCommand}"
+                    CommandParameter="{x:Static t:VisualStyle.Wave}" Content="{DynamicResource panel.audioToVideo.style_wave}" />
+            <Button Classes="pchip" Classes.primary="{Binding IsBars}" Command="{Binding SetStyleCommand}"
+                    CommandParameter="{x:Static t:VisualStyle.Bars}" Content="{DynamicResource panel.audioToVideo.style_bars}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+          <TextBlock Classes="plabel" Text="{Binding ColorText}" />
+          <t:VisualSwatchPicker Palette="{x:Static t:VisualColors.WavePalette}" Hex="{Binding WaveColor, Mode=TwoWay}" />
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.audioToVideo.background}" />
+          <t:VisualSwatchPicker Palette="{x:Static t:VisualColors.BackgroundPalette}" Hex="{Binding BackgroundColor, Mode=TwoWay}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

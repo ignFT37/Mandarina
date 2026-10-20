@@ -1,7 +1,11 @@
 // State of the live donut toolbar: which files are being converted and which presets are offered.
 
+using System.Globalization;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Filee.App.Controls;
+using Filee.App.Mandarina;
+using Panels = Filee.App.Mandarina.Panels;
 using Filee.App.Services;
 using Filee.Core.Formats;
 using Filee.Core.Localization;
@@ -13,6 +17,18 @@ namespace Filee.App.ViewModels;
 
 public sealed partial class RadialViewModel(UserDataStore store, ILocalizer loc, PresetAvailability availability) : ObservableObject
 {
+    /// <summary>Mandarina: the blurred screen behind the wheel (frosted glass), captured just before it shows.</summary>
+    [ObservableProperty] private IImage? _backdrop;
+
+    /// <summary>Mandarina: which wheel is open. Tapping another wheel's key switches (<see cref="SetWheel"/>).</summary>
+    public WheelMode Wheel { get; private set; } = WheelMode.Convert;
+
+    /// <summary>Mandarina: the tools or actions in slice order (empty on the conversion wheel).</summary>
+    public IReadOnlyList<WheelEntry> Entries { get; private set; } = [];
+
+    /// <summary>What the centre pill says while no slice is under the pointer: the files' size.</summary>
+    private string _idleCenter = "";
+
     [ObservableProperty] private IReadOnlyList<DonutItem> _items = [];
     [ObservableProperty] private string _centerTitle = "";
     [ObservableProperty] private string? _centerSubtitle;
@@ -55,7 +71,7 @@ public sealed partial class RadialViewModel(UserDataStore store, ILocalizer loc,
     /// </summary>
     public Preset? PresetAt(int index, int sub)
     {
-        if (index < 0 || index >= Items.Count)
+        if (index < 0 || index >= Items.Count || index >= Presets.Count)
             return null;
         if (sub < 0)
             return Items[index] is { IsEnabled: true, IsGroup: false } ? Presets[index] : null;
@@ -76,11 +92,13 @@ public sealed partial class RadialViewModel(UserDataStore store, ILocalizer loc,
     public bool HasFiles => Files.Count > 0;
 
     /// <summary>Drag mode before any file entered: an empty ring saying "Bring files here".</summary>
-    public void ResetForDrag()
+    public void ResetForDrag(WheelMode wheel = WheelMode.Convert)
     {
+        Wheel = wheel;
         IsClickMode = false;
         Files = [];
         Presets = [];
+        Entries = [];
         _subPresets = [];
         ApplyAppearance();
         ReserveSubRing = store.Profiles.Any(profile => profile.PresetIds.Any(id => store.FindPreset(id)?.IsGroup == true));
@@ -91,7 +109,18 @@ public sealed partial class RadialViewModel(UserDataStore store, ILocalizer loc,
         HitBackground = "#01000000";
     }
 
-    /// <summary>Fills the donut for the given files.</summary>
+    /// <summary>Mandarina: shows another wheel for the same files. False when it is already showing.</summary>
+    public bool SetWheel(WheelMode wheel)
+    {
+        if (wheel == Wheel)
+            return false;
+        Wheel = wheel;
+        if (HasFiles)
+            Load(Files, IsClickMode);
+        return true;
+    }
+
+    /// <summary>Fills the donut for the given files (files and, for the actions wheel, folders).</summary>
     public void Load(IReadOnlyList<string> files, bool clickMode)
     {
         IsClickMode = clickMode;
@@ -99,12 +128,24 @@ public sealed partial class RadialViewModel(UserDataStore store, ILocalizer loc,
         DonutOpacity = 1;
         HitBackground = "Transparent";
         ApplyAppearance();
+        _idleCenter = SizeText(files);
 
-        var profile = ProfileSelector.Select(store.Profiles, files);
-        var formats = ProfileSelector.DetectFormats(files);
+        if (Wheel != WheelMode.Convert)
+        {
+            LoadEntries(files);
+            return;
+        }
+        Entries = [];
+
+        // The conversion wheel works on the files; folders only have actions.
+        var convertible = files.Where(path => !Directory.Exists(path)).ToList();
+        var profile = convertible.Count == 0 ? null : ProfileSelector.Select(store.Profiles, convertible);
+        var formats = ProfileSelector.DetectFormats(convertible);
         Presets = (profile?.PresetIds ?? [])
             .Select(store.FindPreset)
             .OfType<Preset>()
+            // A file isn't offered its own format ("PNG" on a PNG).
+            .Where(p => !(formats.Count == 1 && p.Id == $"to-{formats[0].Id}"))
             .ToList();
 
         _subPresets = Presets
@@ -148,15 +189,81 @@ public sealed partial class RadialViewModel(UserDataStore store, ILocalizer loc,
             };
         }).ToList();
 
-        CenterTitle = formats.Count == 1
-            ? loc.Format("donut.files_same", files.Count, formats[0].DisplayName)
-            : loc.Format("donut.files_mixed", files.Count);
-        CenterSubtitle = clickMode ? loc["donut.close_hint"] : null;
+        CenterTitle = _idleCenter;
+        CenterSubtitle = Items.Count == 0 ? loc["wheel.empty_convert"] : null;
+    }
+
+    /// <summary>Mandarina: the tools or actions wheel.</summary>
+    private void LoadEntries(IReadOnlyList<string> files)
+    {
+        Entries = Wheel == WheelMode.Actions ? WheelCatalog.Actions : WheelCatalog.ToolsFor(files, loc);
+        // Mandarina: one preset per slice keeps Presets aligned with the slices; a tool that opens a panel has a stand-in
+        // (RadialController opens its panel instead of converting).
+        Presets = Wheel == WheelMode.Actions
+            ? []
+            : Entries.Select(e => e.Preset ?? new Preset { Id = "mandarina-panel-" + e.Id, Name = loc[e.TitleKey] }).ToList();
+        _subPresets = Presets.Select(_ => (IReadOnlyList<Preset>)[]).ToList();
+        var formats = ProfileSelector.DetectFormats(files.Where(path => !Directory.Exists(path)));
+        Items = Entries.Select(entry =>
+        {
+            var reason = entry.OpensPanel ? Panels.PanelRegistry.Unavailable(entry.Id, loc)
+                : entry.Preset is { } preset ? availability.Check(preset, formats) : null;
+            return new DonutItem
+            {
+                Id = entry.Id,
+                Label = loc[entry.TitleKey].ToUpper(CultureInfo.CurrentUICulture),
+                Icon = entry.Icon,
+                IsEnabled = reason is null,
+                DisabledReason = reason,
+            };
+        }).ToList();
+        CenterTitle = _idleCenter;
+        CenterSubtitle = Items.Count == 0 ? loc["wheel.empty_tools"] : null;
+    }
+
+    /// <summary>"2,2 MB" for the files; "3 elementos" when only folders were brought.</summary>
+    private string SizeText(IReadOnlyList<string> paths)
+    {
+        long bytes = 0;
+        var files = 0;
+        foreach (var path in paths)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    bytes += new FileInfo(path).Length;
+                    files++;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+        if (files == 0)
+            return loc.Format("wheel.items", paths.Count);
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        var unit = 0;
+        while (size >= 1000 && unit < units.Length - 1)
+        {
+            size /= 1000;
+            unit++;
+        }
+        return string.Format(CultureInfo.CurrentUICulture, unit == 0 ? "{0:0} {1}" : "{0:0.#} {1}", size, units[unit]);
     }
 
     /// <summary>Updates the centre hint for the emphasised slice (and slice <paramref name="sub"/> of its group's ring).</summary>
     public void ShowHint(int index, int sub, bool centerHot)
     {
+        // Mandarina: the pill in the hole names the slice under the pointer, else shows the files' size.
+        if (Wheel != WheelMode.Convert || !Items.Any(i => i.IsGroup))
+        {
+            CenterTitle = index >= 0 && index < Items.Count ? Items[index].Label : _idleCenter;
+            CenterSubtitle = index >= 0 && index < Items.Count && !Items[index].IsEnabled ? Items[index].DisabledReason
+                : Items.Count == 0 ? CenterSubtitle : null;
+            return;
+        }
         if (centerHot)
             CenterSubtitle = loc["donut.cancel"];
         else if (index >= 0 && index < Items.Count && Items[index].Children is { Count: > 0 } children &&

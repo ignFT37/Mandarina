@@ -367,6 +367,18 @@ public sealed class MediaOptions
     /// <summary>Audio codec for targets that can hold several (<see cref="MediaCodecs.AudioCodecsFor"/>).</summary>
     public AudioCodec AudioCodec { get; set; } = AudioCodec.Default;
 
+    /// <summary>Mandarina: drop the tags (title, artist, location, device, …) and chapters.</summary>
+    public bool StripMetadata { get; set; }
+
+    /// <summary>Mandarina: even out the loudness (EBU R128, −16 LUFS). Always encodes the audio again.</summary>
+    public bool Normalize { get; set; }
+
+    /// <summary>
+    /// Mandarina: an audio file keeps its audio stream as it is (no encoding), e.g. when only the tags change. Only for
+    /// a target in the source's own format.
+    /// </summary>
+    public bool CopyAudio { get; set; }
+
     public MediaOptions Clone() => (MediaOptions)MemberwiseClone();
 }
 

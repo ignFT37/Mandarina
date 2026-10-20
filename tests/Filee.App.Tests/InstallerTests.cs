@@ -18,7 +18,7 @@ public class InstallerTests
     {
         get
         {
-            var dir = AppContext.BaseDirectory;
+            var dir = TestPaths.Start;
             while (!File.Exists(Path.Combine(dir, "Filee.slnx")))
                 dir = Path.GetDirectoryName(dir) ?? throw new InvalidOperationException("Repository root not found.");
             return File.ReadAllText(Path.Combine(dir, "installer", "Filee.iss"));
@@ -88,8 +88,8 @@ public class InstallerTests
         var marker = typeof(EngineInstaller).GetField("MarkerName", BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue();
         Assert.Contains($"EngineMarker = '{marker}';", Script);
         Assert.Equal(
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Filee", "engines"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mandarina", "engines"),
             EngineEnvironment.DownloadRoot);
-        Assert.Contains(@"ExpandConstant('{localappdata}\Filee\engines\')", Script);
+        Assert.Contains(@"ExpandConstant('{localappdata}\Mandarina\engines\')", Script);
     }
 }

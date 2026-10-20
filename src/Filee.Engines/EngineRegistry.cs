@@ -28,7 +28,8 @@ public static class EngineRegistry
     /// <summary>
     /// Instantiates all converters. Order only matters as a tie-breaker when no priority is set, so it mirrors
     /// AppSettings.EnginePriority: built-in engines first, the optional downloads last. Software installed on the
-    /// system (Microsoft Office, a system-wide LibreOffice) is never used.
+    /// system (a system-wide LibreOffice) is never used. Mandarina: except the Microsoft Office on the PC
+    /// (<see cref="OfficeConverter"/>), which is optional and can be turned off in Settings → Engines.
     /// </summary>
     public static IReadOnlyList<IConverter> CreateAll(EngineEnvironment env) =>
     [
@@ -47,6 +48,7 @@ public static class EngineRegistry
         new FontConverter(),
         new DocxWriterConverter(),
         new PdfTextConverter(),
+        new PdfSlidesConverter(), // Mandarina: PDF → PPTX, from Filee's feature/pdf-to-pptx
         new EmlConverter(),
         new DataConverter(),
         new SubtitleConverter(),
@@ -57,6 +59,9 @@ public static class EngineRegistry
         new PandocConverter(),
         new GhostscriptConverter(),
         new CalibreConverter(),
+        // Mandarina: the Microsoft Office on the PC (a deliberate exception to "never software installed on the system":
+        // optional, with its own switch in Settings → Engines). Before LibreOffice, so it wins the ties with it.
+        new OfficeConverter(env),
         new LibreOfficeConverter(env),
     ];
 

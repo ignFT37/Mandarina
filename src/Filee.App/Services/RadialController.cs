@@ -15,6 +15,8 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Threading;
 using Filee.App.Controls;
+using Filee.App.Mandarina;
+using Filee.App.Mandarina.Panels;
 using Filee.App.ViewModels;
 using Filee.App.Views;
 using Filee.Core.Conversion;
@@ -30,8 +32,13 @@ public sealed class RadialController(
     WindowService windows,
     UserDataStore store,
     IPlatformServices platform,
+    FileActions actions,
+    PanelHost panels,
     ILogger<RadialController> log)
 {
+    /// <summary>Mandarina: blur radius of the frosted ring, in logical pixels (CSS backdrop-filter: blur(16px)).</summary>
+    private const double BackdropBlur = 16;
+
     /// <summary>
     /// How long the ring shows a running job before the toast window takes over. Long enough for a typical office
     /// document (LibreOffice needs a few seconds), so the user sees it finish where they dropped it.
@@ -46,6 +53,10 @@ public sealed class RadialController(
     private JobViewModel? _lastRingJob;   // for "click the ✓ to open the folder"
     private IDisposable? _handOffTimer;
     private int _dragGeneration;
+    private CancellationTokenSource? _actionCancel; // Mandarina: the file action the ring is showing, for its ×
+
+    /// <summary>Mandarina: how the reason an action failed reaches the user: a message on screen (tests replace it).</summary>
+    internal Func<string, Task>? ShowProblem { get; set; }
 
     /// <summary>
     /// How long a drag that never brought files may keep the invisible window up, in case the button release is
@@ -62,14 +73,14 @@ public sealed class RadialController(
     /// invisible until files are dragged into it (FilesEntered); a gesture without files (text, a rubber-band
     /// selection, nothing at all) never shows anything and closes when the button is released.
     /// </summary>
-    public void ShowForDrag(int x, int y)
+    public void ShowForDrag(int x, int y, WheelMode wheel = WheelMode.Convert)
     {
         ReleaseProgressToToast();
         var window = EnsureWindow();
         // A ring from an earlier conversion (finished or handed to the toast) must not keep this gesture's window up.
         window.DonutControl.LeaveProgressMode();
         _dropped = false;
-        viewModel.ResetForDrag();
+        viewModel.ResetForDrag(wheel);
         window.DonutControl.AllowContextEdit = false;
         PlaceAndShow(window, x, y, activate: false);
 
@@ -82,19 +93,44 @@ public sealed class RadialController(
     }
 
     /// <summary>Opens the donut for known files (click mode).</summary>
-    public void ShowForFiles(int x, int y, IReadOnlyList<string> files)
+    public void ShowForFiles(int x, int y, IReadOnlyList<string> files, WheelMode wheel = WheelMode.Convert)
     {
         if (files.Count == 0)
             return;
         ReleaseProgressToToast();
         var window = EnsureWindow();
         _dropped = false;
+        viewModel.ResetForDrag(wheel);
         viewModel.Load(files, clickMode: true);
         viewModel.FitToThisDonut();
-        window.DonutControl.AllowContextEdit = true;
+        window.DonutControl.AllowContextEdit = wheel == WheelMode.Convert;
         PlaceAndShow(window, x, y, activate: true);
         window.DonutControl.PlayOpenAnimation();
     }
+
+    /// <summary>
+    /// Mandarina: another wheel's key was tapped while the wheel is open. Shows that wheel for the same files (it
+    /// blooms open again); before the files arrived it just remembers which wheel to show.
+    /// </summary>
+    public void SwitchWheel(WheelMode wheel)
+    {
+        if (!_visible || _window is null || _window.DonutControl.IsInProgressMode || !viewModel.SetWheel(wheel))
+            return;
+        _window.DonutControl.AllowContextEdit = viewModel.IsClickMode && wheel == WheelMode.Convert;
+        if (viewModel.HasFiles)
+            _window.DonutControl.PlayOpenAnimation();
+    }
+
+    /// <summary>Mandarina: Esc during the drag. Explorer cancels the drag; the wheel goes too.</summary>
+    public void CancelDrag()
+    {
+        if (_visible && !viewModel.IsClickMode && _window is { DonutControl.IsInProgressMode: false })
+            Close();
+    }
+
+    /// <summary>Mandarina: the wheel a modifier key opens, from the drag gestures in Settings → Shortcuts.</summary>
+    private WheelMode? WheelOf(ModifierKeys key) =>
+        store.Settings.Triggers.FirstOrDefault(t => t.Enabled && t.Kind == TriggerKind.Drag && t.Modifiers == key)?.Wheel;
 
     /// <summary>The mouse button of the drag gesture was released somewhere.</summary>
     public void OnDragGestureEnded()
@@ -165,9 +201,14 @@ public sealed class RadialController(
         {
             _dropped = true;
             if (hit.Kind is DonutHitKind.Segment or DonutHitKind.SubSegment)
-                Convert(hit.Index, hit.Sub, files.Count > 0 ? files : viewModel.Files);
+                Invoke(hit.Index, hit.Sub, files.Count > 0 ? files : viewModel.Files);
             else
                 Close();
+        };
+        window.WheelKeyPressed += key =>
+        {
+            if (WheelOf(key) is { } wheel)
+                SwitchWheel(wheel);
         };
         // One line per drag, to tell "the drag never reached the donut" from "it did but nothing lit up" when someone
         // reports a donut that doesn't react.
@@ -181,13 +222,25 @@ public sealed class RadialController(
                 Close();
         };
 
-        donut.ActiveIndexChanged += (_, index) => viewModel.ShowHint(index, donut.ActiveSubIndex, donut.IsCenterHot);
-        donut.SegmentInvoked += (_, index) => Convert(index, -1, viewModel.Files);
+        var lastTick = -1;
+        donut.ActiveIndexChanged += (_, index) =>
+        {
+            viewModel.ShowHint(index, donut.ActiveSubIndex, donut.IsCenterHot);
+            // Mandarina: a soft tick each time the pointer reaches another slice.
+            if (index >= 0 && index != lastTick && store.Settings.Donut.Sound && !donut.IsInProgressMode)
+                platform.PlaySound(WheelSound.Tick);
+            lastTick = index;
+        };
+        donut.SegmentInvoked += (_, index) => Invoke(index, -1, viewModel.Files);
         donut.SubSegmentInvoked += (_, hit) => Convert(hit.Group, hit.Sub, viewModel.Files);
         donut.CenterInvoked += (_, _) => Close();
         donut.SegmentContextRequested += async (_, index) => await EditPresetAsync(index);
         donut.SubSegmentContextRequested += async (_, hit) => await EditPresetAsync(hit.Group, hit.Sub);
-        donut.ProgressCancelRequested += (_, _) => _progressJob?.CancelCommand.Execute(null);
+        donut.ProgressCancelRequested += (_, _) =>
+        {
+            _progressJob?.CancelCommand.Execute(null);
+            _actionCancel?.Cancel(); // Mandarina
+        };
         donut.ProgressClicked += (_, _) =>
         {
             if (_lastRingJob is { HasOutputs: true } job)
@@ -196,6 +249,80 @@ public sealed class RadialController(
 
         _window = window;
         return window;
+    }
+
+    /// <summary>Mandarina: runs slice <paramref name="index"/> of whichever wheel is open.</summary>
+    internal void Invoke(int index, int sub, IReadOnlyList<string> files)
+    {
+        if (viewModel.Wheel == WheelMode.Actions)
+        {
+            _ = RunActionAsync(index, files);
+            return;
+        }
+        var paths = files.Where(path => !Directory.Exists(path)).ToList(); // folders only have actions
+        if (viewModel.Wheel == WheelMode.Tools && index >= 0 && index < viewModel.Entries.Count && viewModel.Entries[index].OpensPanel)
+            OpenPanel(index, paths);
+        else
+            Convert(index, sub, paths); // the other tools are presets too
+    }
+
+    /// <summary>Mandarina: a tool with a panel. The wheel goes away and the panel opens on the screen it was on.</summary>
+    private void OpenPanel(int index, IReadOnlyList<string> files)
+    {
+        if (_window is not { } window || files.Count == 0 || !viewModel.Items[index].IsEnabled)
+        {
+            Close();
+            return;
+        }
+        var at = window.Position + new PixelPoint((int)(window.Bounds.Width * window.RenderScaling / 2),
+            (int)(window.Bounds.Height * window.RenderScaling / 2));
+        _dropped = true;
+        var id = viewModel.Entries[index].Id;
+        Close();
+        panels.Open(id, files, at);
+    }
+
+    /// <summary>
+    /// Mandarina: runs an action. The wheel turns into a ✓ (or ✗) where it was, as after a conversion; the folder picker
+    /// of Move opens while the window is still up, so it has an owner on top of Explorer.
+    /// </summary>
+    private async Task RunActionAsync(int index, IReadOnlyList<string> files)
+    {
+        if (_window is not { } window || index < 0 || index >= viewModel.Entries.Count || files.Count == 0)
+        {
+            Close();
+            return;
+        }
+        var entry = viewModel.Entries[index];
+        var donut = window.DonutControl;
+        var at = window.Position + new PixelPoint((int)(window.Bounds.Width * window.RenderScaling / 2),
+            (int)(window.Bounds.Height * window.RenderScaling / 2));
+        _dropped = true;
+        log.LogInformation("File action {Action} on {Count} item(s)", entry.Id, files.Count);
+        donut.BeginProgress();
+        donut.SetProgress(FileActions.StartProgress(entry.Id, files));
+        // The ring's × stops a long action (compressing a folder to share it); its progress fills the ring as it goes.
+        var cancel = new CancellationTokenSource();
+        _actionCancel = cancel;
+        ActionResult result;
+        try
+        {
+            result = await actions.RunAsync(entry.Id, files, window, at, new Progress<double>(donut.SetProgress), cancel.Token);
+        }
+        finally
+        {
+            if (ReferenceEquals(_actionCancel, cancel))
+                _actionCancel = null;
+            cancel.Dispose();
+        }
+        // A failure with something to say (a file that could not be read) shows the "!" where the arc stopped, and says why; an action
+        // that simply did nothing (the picker was closed, the ring's × was pressed) shows neither the ✓ nor the "!".
+        if (result.Problem is null)
+            donut.SetProgress(1);
+        donut.CompleteProgress(result.Succeeded ? DonutProgressOutcome.Succeeded
+            : result.Problem is null ? DonutProgressOutcome.Cancelled : DonutProgressOutcome.Failed, HideWindow);
+        if (result.Problem is { } problem)
+            _ = (ShowProblem ?? (text => windows.MessageAsync(null, text)))(problem);
     }
 
     /// <summary>Converts with slice <paramref name="index"/>, or with slice <paramref name="sub"/> of that group's ring.</summary>
@@ -337,6 +464,10 @@ public sealed class RadialController(
         var side = DonutMenu.SideFor(viewModel.OuterRadius, viewModel.ReserveSubRing);
         var sidePx = (int)Math.Ceiling(side * scaling);
         var position = WindowPosition(cursor, screen?.WorkingArea, sidePx);
+
+        // Mandarina: the screen under the wheel, blurred, before the window covers it (the frosted ring).
+        if (!window.IsVisible)
+            viewModel.Backdrop = Backdrop.Capture(platform, new PixelRect(position, new PixelSize(sidePx, sidePx)), BackdropBlur * scaling);
 
         Motion.Refresh();
         window.Position = position;

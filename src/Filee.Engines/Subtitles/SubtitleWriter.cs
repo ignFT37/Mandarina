@@ -12,7 +12,7 @@ namespace Filee.Engines.Subtitles;
 internal static class SubtitleWriter
 {
     /// <summary>Format ids this engine writes.</summary>
-    public static readonly string[] Formats = ["srt", "ass", "vtt", "smi", "lrc", "ttml", "sub"];
+    public static readonly string[] Formats = ["srt", "ass", "vtt", "smi", "lrc", "ttml", "sub", "txt"];
 
     /// <summary>The frame rate MicroDVD files are written with (stated in their first line).</summary>
     internal const double MicroDvdFps = SubtitleReader.MicroDvdDefaultFps;
@@ -28,10 +28,23 @@ internal static class SubtitleWriter
             "lrc" => (Lrc(document), false),
             "ttml" => (Ttml(document), false),
             "sub" => (MicroDvd(document), true),
+            "txt" => (PlainText(document), false),
             _ => throw new NotSupportedException($"Subtitles can't be written as '{format}'."),
         };
         return [.. (bom ? Encoding.UTF8.GetPreamble() : []), .. new UTF8Encoding(false).GetBytes(text)];
     }
+
+    /// <summary>Mandarina: just the words: one cue per line, without markup or times.</summary>
+    private static string PlainText(SubtitleDocument document) =>
+        string.Concat(document.Cues
+            .Select(cue => string.Concat(SubtitleMarkup.Tokens(cue.Text).Select(token => token.Kind switch
+            {
+                MarkupKind.Text => token.Value,
+                MarkupKind.LineBreak => " ",
+                _ => "",
+            })).Trim())
+            .Where(line => line.Length > 0)
+            .Select(line => line + "\r\n"));
 
     // ───────────────────────── SubRip ─────────────────────────
 

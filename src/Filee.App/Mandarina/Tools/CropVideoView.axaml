@@ -1,0 +1,37 @@
+<!-- Mandarina: the options of the video CROP panel: a frame of the video with its crop box and the frame slider on the left;
+     proportion and exact size on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.CropVideoView"
+             x:DataType="t:CropVideoPanel">
+  <Grid ColumnDefinitions="*,290" ColumnSpacing="14">
+    <!-- the frame -->
+    <Border Classes="pcard">
+      <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding OriginalSizeText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        </Grid>
+        <Border Grid.Row="1" Classes="pwell">
+          <Panel>
+            <t:CropSurface Source="{Binding Preview}" PixelWidth="{Binding PixelWidth}" PixelHeight="{Binding PixelHeight}"
+                           Selection="{Binding Selection, Mode=TwoWay}" AspectRatio="{Binding AspectRatio}"
+                           IsEditable="{Binding CanDragBox}" />
+            <TextBlock Text="{DynamicResource panel.cropVideo.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Classes="plabel" IsVisible="{Binding IsLoading}" />
+            <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                       Margin="24" Classes="plabel" IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </Panel>
+        </Border>
+        <p:SliderRow Grid.Row="2" Label="{DynamicResource panel.cropVideo.frame}" Minimum="0" Maximum="{Binding Duration}"
+                     Value="{Binding FrameTime, Mode=TwoWay}" Step="0.1" ValueFormat="0.0's'" IsEnabled="{Binding IsReady}" />
+        <TextBlock Grid.Row="3" Classes="plabel" Text="{Binding HintText}" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <!-- proportion · exact size -->
+    <t:CropOptionsView Grid.Column="1" VerticalAlignment="Top" />
+  </Grid>
+</UserControl>

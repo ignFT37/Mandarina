@@ -109,6 +109,10 @@
             <StackPanel Spacing="10">
               <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                  <!-- Mandarina: the Microsoft Office card (only when Office is installed) -->
+                  <ToggleSwitch IsVisible="{Binding HasSwitch}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                IsChecked="{Binding $parent[ItemsControl].((vm:EnginesPageViewModel)DataContext).OfficeEnabled, Mode=TwoWay}"
+                                OnContent="{DynamicResource engines.office_switch}" OffContent="{DynamicResource engines.office_switch}" />
                   <Button Classes="icon" ToolTip.Tip="{DynamicResource engines.move_up}"
                           Command="{Binding $parent[ItemsControl].((vm:EnginesPageViewModel)DataContext).MoveUpCommand}" CommandParameter="{Binding}">
                     <PathIcon Width="14" Height="14" Data="{StaticResource Icon.ArrowUp}" />

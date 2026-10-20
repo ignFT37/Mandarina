@@ -60,7 +60,7 @@ public sealed class JobQueue : IAsyncDisposable
         job.State = JobState.Running;
         Notify(job);
 
-        var workDir = Path.Combine(Path.GetTempPath(), "Filee", job.Id);
+        var workDir = Path.Combine(Path.GetTempPath(), "Mandarina", job.Id);
         Directory.CreateDirectory(workDir);
         try
         {
@@ -405,6 +405,12 @@ public sealed class JobQueue : IAsyncDisposable
             file.State = FileState.Cancelled;
             Notify(job);
             return [];
+        }
+        // Mandarina: an engine that explains its failure in the user's language (the Microsoft Office engine).
+        catch (ConversionFailureException ex)
+        {
+            _log.LogWarning(ex, "Converting {File} failed: {Key}", file.SourcePath, ex.Key);
+            return Fail(file, ex.Key, ex.Detail);
         }
         catch (Exception ex)
         {

@@ -10,6 +10,7 @@ using Filee.Core.Conversion;
 using Filee.Core.Localization;
 using Filee.Core.Settings;
 using Filee.Engines.Infrastructure;
+using Filee.Engines.Office;
 
 namespace Filee.App.ViewModels.Pages;
 
@@ -21,7 +22,14 @@ public sealed partial class EngineItemViewModel(IConverter converter, EngineStat
     public IConverter Converter { get; } = converter;
     public string Name => Converter.DisplayName;
     public bool IsAvailable { get; } = status.IsAvailable;
-    public string StatusText { get; } = status.IsAvailable ? loc["engines.available"] : loc[status.ReasonKey ?? "engines.unavailable"];
+
+    /// <summary>Mandarina: the engine ships with the program (its code, or its files in the install folder): it needs no download.</summary>
+    public bool IsIncluded { get; } = ShipsWithProgram(converter, status);
+
+    public string StatusText { get; } = StatusFor(converter, status, loc);
+
+    /// <summary>Mandarina: the Microsoft Office card has a switch (the engine is on the PC, not part of the program).</summary>
+    public bool HasSwitch { get; } = converter is OfficeConverter { IsInstalled: true };
 
     /// <summary>Path of the program or other technical detail, shown as a tooltip.</summary>
     public string? Detail { get; } = status.Detail;
@@ -33,6 +41,20 @@ public sealed partial class EngineItemViewModel(IConverter converter, EngineStat
     public string? Description { get; } = Describe(loc, converter.Id);
 
     public string Conversions { get; } = loc.Format("engines.conversions", converter.Edges.Count);
+
+    // Mandarina: Microsoft Office is neither included in the program nor a download: it is "Installed on this PC", or the
+    // reason it can't be used (not installed, turned off), or that it works but is not activated.
+    private static bool ShipsWithProgram(IConverter converter, EngineStatus status) =>
+        status.IsAvailable && converter is not OfficeConverter && !EngineDownloads.ProvidedByPackage(converter.Id);
+
+    private static string StatusFor(IConverter converter, EngineStatus status, ILocalizer loc)
+    {
+        if (converter is OfficeConverter)
+            return status.ReasonKey is { } reason ? loc[reason] : status.IsAvailable ? loc["engines.system"] : loc["engines.unavailable"];
+        return status.IsAvailable
+            ? loc[ShipsWithProgram(converter, status) ? "engines.included" : "engines.available"]
+            : loc[status.ReasonKey ?? "engines.unavailable"];
+    }
 
     private static string? Describe(ILocalizer loc, string id)
     {
@@ -59,6 +81,7 @@ public sealed partial class EnginesPageViewModel : ObservableObject, IDisposable
         _libreOfficeForHwp = store.Settings.LibreOfficeForHwp;
         _libreOfficeForDocuments = store.Settings.LibreOfficeForDocuments;
         _libreOfficeForSheets = store.Settings.LibreOfficeForSheets;
+        _officeEnabled = store.Settings.OfficeEnabled;
         _catalog.Changed += OnCatalogChanged;
         Reload();
     }
@@ -74,6 +97,15 @@ public sealed partial class EnginesPageViewModel : ObservableObject, IDisposable
 
     /// <summary>Spreadsheets → PDF through LibreOffice instead of the built-in route.</summary>
     [ObservableProperty] private bool _libreOfficeForSheets;
+
+    /// <summary>Mandarina: convert with the Microsoft Office on the PC (App.ApplySettings re-checks the engines).</summary>
+    [ObservableProperty] private bool _officeEnabled;
+
+    partial void OnOfficeEnabledChanged(bool value)
+    {
+        _store.Settings.OfficeEnabled = value;
+        _store.SaveSettings();
+    }
 
     partial void OnLibreOfficeForSlidesChanged(bool value)
     {

@@ -60,6 +60,40 @@ public interface IPlatformServices
     /// window below normal ones (seen after the Photos app opened) while it still reports itself as topmost.
     /// </summary>
     void RaiseTopmost(nint windowHandle);
+
+    // ───────── Mandarina: file actions, the wheel's frosted backdrop and its tick ─────────
+
+    /// <summary>
+    /// Opens the system share sheet for the files (Windows: Share, with Nearby sharing). False when it can't. The sheet takes files,
+    /// not folders. <paramref name="closed"/> runs once, on a background thread, when the sheet is gone and the files are no longer
+    /// needed (so a caller that made temporary copies can delete them); it never runs when this returns false.
+    /// </summary>
+    bool ShareFiles(IReadOnlyList<string> paths, nint ownerWindow, Action? closed = null) => false;
+
+    /// <summary>
+    /// Brings the file manager window that is already showing exactly <paramref name="folder"/> to the front (restoring it when it
+    /// was minimized). False when there is none, and the caller opens the folder with <see cref="RevealInFileManager"/>.
+    /// Blocks for a moment: call it off the UI thread.
+    /// </summary>
+    bool FocusFolderInFileManager(string folder) => false;
+
+    /// <summary>Puts files and folders on the clipboard, ready to paste in the file manager. False when it can't.</summary>
+    bool CopyFilesToClipboard(IReadOnlyList<string> paths) => false;
+
+    /// <summary>Opens a terminal in <paramref name="folder"/>.</summary>
+    void OpenTerminal(string folder) { }
+
+    /// <summary>
+    /// The screen's pixels in a rectangle (physical pixels), as top-down BGRA rows, for the wheel's frosted glass.
+    /// Null when the platform can't capture the screen.
+    /// </summary>
+    byte[]? CaptureScreen(int x, int y, int width, int height) => null;
+
+    /// <summary>Plays a short WAV (the whole file in memory) without waiting. The array must not change afterwards.</summary>
+    void PlaySound(byte[] wav) { }
+
+    /// <summary>Mandarina: stops the sound <see cref="PlaySound"/> is playing (the audio panels' preview).</summary>
+    void StopSound() { }
 }
 
 /// <summary>Whether "Convert with Filee" is in the top-level Windows 11 File Explorer menu (not just "Show more options").</summary>

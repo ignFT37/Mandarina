@@ -1,0 +1,63 @@
+<!-- Mandarina: the right-hand column the two REDACT panels share: the detection buttons and the effect that covers the areas. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.RedactOptionsView"
+             x:DataType="t:RedactPanelBase">
+  <StackPanel Spacing="12">
+    <!-- find faces or text on this PC · clear -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="8">
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+          <Button Classes="pchip primary" Padding="6,7" HorizontalAlignment="Stretch" Click="OnDetectFaces"
+                  IsEnabled="{Binding CanDetect}" Content="{Binding DetectFacesText}" />
+          <Button Grid.Column="1" Classes="pchip primary" Padding="6,7" HorizontalAlignment="Stretch" Click="OnDetectText"
+                  IsEnabled="{Binding CanDetect}" Content="{Binding DetectTextText}" />
+        </Grid>
+        <Button Classes="pchip" Padding="6,7" HorizontalAlignment="Stretch" Click="OnClear"
+                IsEnabled="{Binding HasRegions}" Content="{Binding ClearText}" />
+        <StackPanel Spacing="5" Margin="0,2,0,0" IsVisible="{Binding IsDetecting}">
+          <ProgressBar IsIndeterminate="True" Height="4" MinHeight="4" Foreground="#FF5200" />
+          <TextBlock Classes="plabel" Text="{Binding DetectingText}" />
+        </StackPanel>
+        <TextBlock Classes="plabel" Text="{Binding DetectionNote}" TextWrapping="Wrap" IsVisible="{Binding HasDetectionNote}" />
+      </StackPanel>
+    </Border>
+
+    <!-- the effect: three equal buttons, one always chosen -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="plabel" Text="{Binding EffectText}" />
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+          <ToggleButton Classes="pchip" Tag="Fill" Padding="4,7" FontSize="12.5" HorizontalAlignment="Stretch" Click="OnEffect"
+                        IsChecked="{Binding IsFill, Mode=OneWay}" Content="{Binding FillText}" />
+          <ToggleButton Grid.Column="1" Classes="pchip" Tag="Blur" Padding="4,7" FontSize="12.5" HorizontalAlignment="Stretch" Click="OnEffect"
+                        IsChecked="{Binding IsBlur, Mode=OneWay}" Content="{Binding BlurText}" />
+          <ToggleButton Grid.Column="2" Classes="pchip" Tag="Pixelate" Padding="4,7" FontSize="12.5" HorizontalAlignment="Stretch" Click="OnEffect"
+                        IsChecked="{Binding IsPixelate, Mode=OneWay}" Content="{Binding PixelateText}" />
+        </Grid>
+
+        <StackPanel Spacing="4" IsVisible="{Binding IsFill}">
+          <TextBlock Classes="plabel" Text="{Binding ColorText}" />
+          <t:RedactSwatchPicker Colors="{Binding Swatches}" SelectedColor="{Binding FillColor, Mode=TwoWay}" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <StackPanel Spacing="2" IsVisible="{Binding IsBlur}">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="plabel" Text="{Binding StrengthText}" />
+            <TextBlock Grid.Column="1" Classes="pvalue" FontSize="12.5" Text="{Binding Strength, StringFormat='{}{0:0}'}" />
+          </Grid>
+          <Slider Minimum="1" Maximum="100" Value="{Binding Strength}" />
+        </StackPanel>
+
+        <StackPanel Spacing="2" IsVisible="{Binding IsPixelate}">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="plabel" Text="{Binding BlockSizeText}" />
+            <TextBlock Grid.Column="1" Classes="pvalue" FontSize="12.5" Text="{Binding BlockSize, StringFormat='{}{0:0}'}" />
+          </Grid>
+          <Slider Minimum="4" Maximum="64" Value="{Binding BlockSize}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

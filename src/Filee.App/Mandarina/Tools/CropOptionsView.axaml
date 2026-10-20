@@ -1,0 +1,59 @@
+<!-- Mandarina: the half of the CROP panels that is the same for photos and video: the proportion pills with the turn button, and the
+     exact size (width, height, and what will come out). Bound to a CropPanelBase. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.CropOptionsView"
+             x:DataType="t:CropPanelBase">
+  <StackPanel Spacing="12" IsEnabled="{Binding IsReady}">
+    <!-- proportion -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="plabel" VerticalAlignment="Center" Text="{DynamicResource panel.crop.ratio}" />
+          <Button Grid.Column="1" Classes="pchip" Padding="9,5" Click="OnRotate" ToolTip.Tip="{DynamicResource panel.crop.rotate}">
+            <PathIcon Width="14" Height="14" Data="M12 4 A8 8 0 1 1 4 12 L6.5 12 A5.5 5.5 0 1 0 12 6.5 Z M1.2 12 L9.3 12 L5.25 6.9 Z" />
+          </Button>
+        </Grid>
+        <!-- the pills carry a 6 px bottom margin for the rows between them; the last row gives it back to the card's padding -->
+        <ItemsControl ItemsSource="{Binding Ratios}" Margin="0,0,0,-6">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="t:CropRatio">
+              <ToggleButton Classes="pchip" Margin="0,0,6,6" Padding="11,5" Content="{Binding Label}"
+                            IsChecked="{Binding IsSelected, Mode=OneWay}" IsVisible="{Binding IsVisible}" Click="OnRatioClick" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
+    <!-- exact size -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.crop.size}" />
+        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.crop.width}" />
+            <TextBox x:Name="WidthBox" Text="{Binding WidthText, Mode=OneWay}" MaxLength="6" LostFocus="OnWidthCommit" KeyDown="OnSizeKeyDown" TextInput="OnSizeTextInput" />
+          </StackPanel>
+          <TextBlock Grid.Column="1" Classes="plabel" Text="×" VerticalAlignment="Bottom" Margin="0,0,0,8" />
+          <StackPanel Grid.Column="2" Spacing="4">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.crop.height}" />
+            <TextBox x:Name="HeightBox" Text="{Binding HeightText, Mode=OneWay}" MaxLength="6" LostFocus="OnHeightCommit" KeyDown="OnSizeKeyDown" TextInput="OnSizeTextInput" />
+          </StackPanel>
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="plabel" VerticalAlignment="Center" Text="{DynamicResource panel.crop.result}" />
+          <TextBlock Grid.Column="1" Classes="pvalue" Text="{Binding ResultText}" />
+        </Grid>
+        <TextBlock Classes="plabel" Text="{Binding NoteText}" TextWrapping="Wrap"
+                   IsVisible="{Binding NoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

@@ -34,11 +34,7 @@ public static class AppHost
             .SetMinimumLevel(LogLevel.Information));
 
         services.AddSingleton(sp => new UserDataStore(dataDir, sp.GetRequiredService<ILogger<UserDataStore>>()));
-        services.AddSingleton<IPlatformServices>(_ =>
-            OperatingSystem.IsWindows() ? new WindowsPlatformServices()
-            : OperatingSystem.IsMacOS() ? new MacOSPlatformServices()
-            : OperatingSystem.IsLinux() ? new LinuxPlatformServices()
-            : new NullPlatformServices());
+        services.AddSingleton<IPlatformServices>(_ => PlatformLayers.Create());
 
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ILocalizer>(sp => sp.GetRequiredService<LocalizationService>());
@@ -62,6 +58,8 @@ public static class AppHost
         services.AddSingleton<ConversionService>();
         services.AddSingleton<WatchFolderService>();
         services.AddSingleton<TriggerService>();
+        services.AddSingleton<Mandarina.FileActions>();
+        services.AddSingleton<Mandarina.Panels.PanelHost>();
         services.AddSingleton<RadialController>();
         services.AddSingleton<TrayService>();
         services.AddSingleton<UpdateService>();

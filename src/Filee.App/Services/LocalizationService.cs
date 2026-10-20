@@ -19,6 +19,7 @@ public sealed class LocalizationService : ILocalizer
     public static readonly IReadOnlyList<(string Code, string NativeName)> Languages =
     [
         ("en", "English"),
+        ("es", "Español"),
         ("ko", "한국어"),
         ("zh-CN", "简体中文"),
     ];
@@ -92,7 +93,9 @@ public sealed class LocalizationService : ILocalizer
             return Languages.First(l => l.Code.Equals(setting, StringComparison.OrdinalIgnoreCase)).Code;
 
         // macOS gives an app started from Finder no LANG: its language list comes from the system instead.
-        var ui = Filee.Platform.MacOS.MacOSLocale.PreferredLanguage() ?? CultureInfo.InstalledUICulture.Name;
+        var ui = PlatformLayers.MacPreferredLanguage() ?? CultureInfo.InstalledUICulture.Name;
+        if (ui.StartsWith("es", StringComparison.OrdinalIgnoreCase))
+            return "es";
         if (ui.StartsWith("ko", StringComparison.OrdinalIgnoreCase))
             return "ko";
         if (ui.StartsWith("zh", StringComparison.OrdinalIgnoreCase))

@@ -37,9 +37,9 @@
       </ResourceDictionary.ThemeDictionaries>
 
       <!-- Defaults; ThemeService overwrites these at startup. -->
-      <SolidColorBrush x:Key="AccentBrush" Color="#7F77DD" />
-      <SolidColorBrush x:Key="AccentSoftBrush" Color="#2E7F77DD" />
-      <SolidColorBrush x:Key="AccentFaintBrush" Color="#177F77DD" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#F35B28" />
+      <SolidColorBrush x:Key="AccentSoftBrush" Color="#2EF35B28" />
+      <SolidColorBrush x:Key="AccentFaintBrush" Color="#17F35B28" />
       <SolidColorBrush x:Key="AccentStrongBrush" Color="#5F59A6" />
       <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
       <CornerRadius x:Key="SoftRadius">16</CornerRadius>

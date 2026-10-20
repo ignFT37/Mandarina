@@ -5,6 +5,8 @@
 //                →  button up  →  DragEnded
 // Hold gesture:  button down with modifiers  →  (armed)  →  HoldElapsed without moving  →  HoldTriggered
 // Key chord:     key down with the exact modifiers  →  KeyChordTriggered at the last known cursor position
+// Wheel key:     (Mandarina) a plain drag past the threshold  →  a drag gesture's modifier tapped
+//                →  DragStarted; tapped again with the wheel open  →  WheelRequested (switch wheels); Esc  →  DragCancelled
 
 using Filee.Core.Settings;
 
@@ -19,8 +21,11 @@ public sealed class GestureDetector
     private bool _dragActive;
     private bool _lateRejected; // scope check failed for this drag; don't re-check on every move
     private int _lastX, _lastY;
+    private Pressed? _pressed;   // any button held, with or without modifiers (wheel keys tapped during a drag)
+    private bool _plainDrag;     // _pressed moved past the threshold
 
     private sealed record Armed(TriggerGesture Gesture, TriggerMouseButton Button, int X, int Y, long Token);
+    private sealed record Pressed(TriggerMouseButton Button, int X, int Y);
 
     /// <summary>
     /// Decides whether a gesture may start at a screen point (scope / excluded apps / own windows).
@@ -38,6 +43,12 @@ public sealed class GestureDetector
     public event Action<int, int>? DragEnded;
     public event Action<TriggerGesture, int, int>? HoldTriggered;
     public event Action<TriggerGesture, int, int>? KeyChordTriggered;
+
+    /// <summary>Another drag gesture's key was tapped while a wheel is open: switch to its wheel.</summary>
+    public event Action<TriggerGesture>? WheelRequested;
+
+    /// <summary>Esc during an active drag gesture (Explorer cancels the drag; the wheel should close).</summary>
+    public event Action? DragCancelled;
 
     /// <summary>Raised when a hold gesture is armed; the owner must call <see cref="HoldElapsed"/> after the delay.</summary>
     public event Action<long, int>? HoldTimerRequested;
@@ -61,6 +72,8 @@ public sealed class GestureDetector
             _lastY = y;
             _armed = null;
             _lateRejected = false;
+            _pressed = new Pressed(button, x, y);
+            _plainDrag = false;
             if (Paused)
                 return;
 
@@ -89,6 +102,9 @@ public sealed class GestureDetector
         {
             _lastX = x;
             _lastY = y;
+            if (!_plainDrag && _pressed is { } pressed && pressed.Button == heldButton &&
+                (Math.Abs(x - pressed.X) > SystemDragThreshold || Math.Abs(y - pressed.Y) > SystemDragThreshold))
+                _plainDrag = true;
             fire = _armed is null ? DetectLateModifier(x, y, modifiers, heldButton) : DetectDragPastThreshold(x, y);
             if (fire is not null)
                 _dragActive = true;
@@ -143,6 +159,8 @@ public sealed class GestureDetector
             ended = _dragActive;
             _dragActive = false;
             _lateRejected = false;
+            _pressed = null;
+            _plainDrag = false;
         }
         if (ended)
             DragEnded?.Invoke(x, y);
@@ -169,6 +187,18 @@ public sealed class GestureDetector
     /// <summary>A key went down. <paramref name="key"/> is the key name without the "Vc" prefix, e.g. "Space".</summary>
     public void KeyDown(string key, ModifierKeys modifiers)
     {
+        if (WheelKey(key) is { } wheelKey && KeyDuringDrag(wheelKey))
+            return;
+        if (key == "Escape")
+        {
+            bool cancel;
+            lock (_lock)
+                cancel = _dragActive;
+            if (cancel)
+                DragCancelled?.Invoke();
+            return;
+        }
+
         TriggerGesture? fire;
         int x, y;
         lock (_lock)
@@ -185,5 +215,56 @@ public sealed class GestureDetector
         }
         if (fire is not null)
             KeyChordTriggered?.Invoke(fire, x, y);
+    }
+
+    /// <summary>The modifier a key stands for ("LeftShift" → Shift), or null for any other key.</summary>
+    internal static ModifierKeys? WheelKey(string key) => key switch
+    {
+        "LeftShift" or "RightShift" or "Shift" => ModifierKeys.Shift,
+        "LeftControl" or "RightControl" or "Control" or "Ctrl" => ModifierKeys.Ctrl,
+        "LeftAlt" or "RightAlt" or "Alt" => ModifierKeys.Alt,
+        "LeftMeta" or "RightMeta" or "Meta" => ModifierKeys.Meta,
+        _ => null,
+    };
+
+    /// <summary>
+    /// A wheel key tapped while a drag is under way (start dragging, then tap the key). Opens that drag
+    /// gesture's wheel, or switches to it when a wheel is already open. Returns true when the key was used. Key repeat
+    /// while it is held just asks for the same wheel again, which the owner ignores.
+    /// </summary>
+    private bool KeyDuringDrag(ModifierKeys key)
+    {
+        TriggerGesture? start = null, change = null;
+        int x, y;
+        lock (_lock)
+        {
+            if (Paused || _pressed is not { } pressed)
+                return false;
+            var gesture = _gestures.FirstOrDefault(g =>
+                g.Kind == TriggerKind.Drag && g.Button == pressed.Button && g.Modifiers == key);
+            if (gesture is null)
+                return false;
+            (x, y) = (_lastX, _lastY);
+            if (_dragActive)
+                change = gesture;
+            else if (_plainDrag && !_lateRejected)
+            {
+                // The scope is where the files were picked up (Explorer), not where the pointer is now.
+                if (ScopeFilter(gesture, pressed.X, pressed.Y))
+                {
+                    _armed = null;
+                    _dragActive = true;
+                    start = gesture;
+                }
+                else
+                    _lateRejected = true;
+            }
+        }
+
+        if (start is not null)
+            DragStarted?.Invoke(start, x, y);
+        else if (change is not null)
+            WheelRequested?.Invoke(change);
+        return start is not null || change is not null;
     }
 }

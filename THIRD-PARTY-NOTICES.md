@@ -1,7 +1,12 @@
 # Third-party notices
 
-Filee is MIT-licensed. It uses and redistributes the following third-party software.
-Each component remains under its own license.
+Mandarina is MIT-licensed (see `LICENSE`). It is a fork of [Filee](https://github.com/KnifeLemon/Filee), also MIT-licensed
+(Copyright (c) 2026 Myeonggu Kim (KnifeLemon) and Filee contributors), and redistributes Filee's code, including the PDF → PPTX
+engine (`pdf-slides`) taken from Filee's `feature/pdf-to-pptx` branch (commit `e52db60`). Mandarina is inspired by Tangerine for
+Mac (Leap Studio) but is an independent project: no code, text or asset from Tangerine is included.
+
+Mandarina uses and redistributes the following third-party software (the names below that say "Filee" are Filee's own parts,
+which Mandarina inherits). Each component remains under its own license.
 
 ## Libraries (NuGet)
 
@@ -39,7 +44,8 @@ Each component remains under its own license.
 | Microsoft.Extensions.* | MIT | https://github.com/dotnet/runtime |
 | cu2qu (fontTools): the cubic-to-quadratic approach followed by `Filee.Engines/Fonts/Cff/CubicToQuadratic.cs` | Apache-2.0, Copyright 2016 Google Inc. | https://github.com/fonttools/fonttools |
 
-Used by the tests only (not redistributed): DocumentFormat.OpenXml (Open XML SDK, MIT, https://github.com/dotnet/Open-XML-SDK) validates the DOCX files Filee writes.
+Used by the tests only (not redistributed): DocumentFormat.OpenXml (Open XML SDK, MIT, https://github.com/dotnet/Open-XML-SDK) validates the DOCX files Filee writes;
+System.Speech (MIT, https://github.com/dotnet/runtime) makes the synthetic voice the transcription tests listen to.
 
 ## Engines
 
@@ -68,8 +74,20 @@ Downloaded from their official release pages when the user chooses to install th
 | Microsoft Visual C++ Redistributable (for Ghostscript, conda-forge `vc14_runtime`) | Microsoft Visual C++ Redistributable license | https://github.com/conda-forge/vc-feedstock |
 | FFmpeg 9.0.2 (gyan.dev "full_build-shared" Windows build; ffmpeg.exe, ffprobe.exe and their libraries, incl. x264, x265, libvpx, LAME, Opus, Vorbis, Theora, OpenCORE AMR) | GPL-3.0-or-later (the build is configured with `--enable-gpl --enable-version3`); FFmpeg itself LGPL-2.1-or-later | https://ffmpeg.org, build: https://www.gyan.dev/ffmpeg/builds/ (source: https://github.com/GyanD/codexffmpeg) |
 | calibre (ebook-convert) | GPL-3.0 | https://calibre-ebook.com |
+| Whisper large-v3-turbo, quantized to 5 bits (`ggml-large-v3-turbo-q5_0.bin`, a data file for the transcription tools, read by FFmpeg's `whisper` filter, i.e. whisper.cpp) | MIT (OpenAI Whisper weights; whisper.cpp and the ggml conversion by Georgi Gerganov, MIT) | https://github.com/openai/whisper, https://github.com/ggml-org/whisper.cpp, https://huggingface.co/ggerganov/whisper.cpp |
+| Whisper small, quantized to 8 bits (`ggml-small-q8_0.bin`, the smaller model for PCs without a dedicated graphics card; same use as the one above) | MIT (OpenAI Whisper weights; whisper.cpp and the ggml conversion by Georgi Gerganov, MIT) | https://github.com/openai/whisper, https://github.com/ggml-org/whisper.cpp, https://huggingface.co/ggerganov/whisper.cpp |
 
 These programs run as separate processes. Their source code is available from the linked projects.
+
+Used when they are already on the PC, never redistributed or downloaded:
+
+| Component | Use |
+|---|---|
+| Microsoft Word, Excel and PowerPoint | The optional Office engine converts documents through the user's own installation, over COM (Settings → Engines has a switch). Mandarina neither includes nor activates Office. |
+| Windows text recognition (`Windows.Media.Ocr`), face detection (`Windows.Media.FaceAnalysis`) and sharing (`DataTransferManager`) | The Redact tools look for text and faces locally, and the Share action opens Windows' own share sheet. They run from Windows PowerShell 5.1. |
+
+The tool wheels' icons, the app icon and the wheel's tick sound are Mandarina's own work (the icons are drawn in code or SVG, the
+sound is synthesised); the Material Design Icons and fonts below are Filee's.
 
 ## Windows 11 Explorer menu (FileeExplorerMenu.dll)
 
@@ -83,8 +101,9 @@ Windows headers, without a C runtime. Pieces of these projects that can end up i
 
 ## Installer
 
-`Filee-<version>-win-Setup.exe` is built with Inno Setup (a build tool, not part of the app); the setup and uninstall
-programs inside it are Inno Setup's.
+Filee's `Filee-<version>-win-Setup.exe` (script `installer/Filee.iss`) is built with Inno Setup (a build tool, not part of the
+app); the setup and uninstall programs inside it are Inno Setup's. Mandarina's own scripts (`tools/mandarina/publish-mandarina.ps1`
+and `install-mandarina.ps1`) use no third-party installer.
 
 | Component | License | Project |
 |---|---|---|

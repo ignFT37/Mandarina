@@ -1,0 +1,20 @@
+<!-- Mandarina: the window of the one-click TRANSCRIBE: the file, what it does, what it is doing now and where the model runs. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.TranscribeView"
+             x:DataType="t:TranscribePanelBase">
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="12">
+      <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+      <TextBlock Text="{DynamicResource panel.transcribe.quick_intro}" TextWrapping="Wrap" FontSize="12.5" />
+      <Border Classes="pwell" Padding="14,11" IsVisible="{Binding Phase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="{Binding Phase}" TextWrapping="Wrap" FontSize="12.5" />
+      </Border>
+      <TextBlock Classes="plabel" Text="{Binding DeviceText}" TextWrapping="Wrap"
+                 IsVisible="{Binding DeviceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <TextBlock Classes="plabel" Text="{Binding MissingText}" TextWrapping="Wrap" Foreground="#C0392B"
+                 IsVisible="{Binding MissingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+  </Border>
+</UserControl>

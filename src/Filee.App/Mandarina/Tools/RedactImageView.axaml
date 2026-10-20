@@ -1,0 +1,41 @@
+<!-- Mandarina: the options of the photo REDACT panel: the photo with its areas on the left; the detection buttons, the effect and the metadata on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.RedactImageView"
+             x:DataType="t:RedactImagePanel">
+  <Grid ColumnDefinitions="*,280" ColumnSpacing="14" VerticalAlignment="Top">
+    <!-- the photo -->
+    <Border Classes="pcard" VerticalAlignment="Top">
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding SizeText}" Margin="12,0,0,0" />
+        </Grid>
+        <Border Classes="pwell" Height="372">
+          <Panel>
+            <t:RegionEditor Source="{Binding Preview}" PixelWidth="{Binding SourceWidth}" PixelHeight="{Binding SourceHeight}"
+                            Regions="{Binding Regions}" SelectedRegion="{Binding SelectedRegion, Mode=TwoWay}"
+                            CoverBrush="{Binding CoverBrush}" />
+            <TextBlock Text="{DynamicResource panel.redactImage.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Classes="plabel" IsVisible="{Binding IsLoading}" />
+            <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                       Margin="24" Classes="plabel" IsVisible="{Binding HasLoadError}" />
+          </Panel>
+        </Border>
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.redactImage.hint}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- detection · effect · metadata -->
+    <StackPanel Grid.Column="1" Spacing="12" VerticalAlignment="Top">
+      <t:RedactOptionsView />
+      <Border Classes="pcard">
+        <StackPanel Spacing="6">
+          <CheckBox IsChecked="{Binding StripMetadata, Mode=TwoWay}" Content="{DynamicResource panel.redactImage.strip}" />
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.redactImage.strip_hint}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

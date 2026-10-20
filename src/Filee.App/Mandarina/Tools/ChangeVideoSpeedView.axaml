@@ -1,0 +1,46 @@
+<!-- Mandarina: the options of the SPEED panel: one card with the speed pills, the slider for the exact speed, and the length
+     before and after. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.ChangeVideoSpeedView"
+             x:DataType="t:ChangeVideoSpeedPanel">
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="16">
+      <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+
+      <!-- while the video is read, or why it could not be -->
+      <TextBlock Classes="plabel" Text="{DynamicResource panel.changeVideoSpeed.loading}" IsVisible="{Binding IsLoading}" />
+      <TextBlock Classes="plabel" Text="{Binding LoadError}" TextWrapping="Wrap"
+                 IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <StackPanel Spacing="16" IsEnabled="{Binding IsReady}">
+        <!-- the usual speeds as pills: the one that matches the speed is on -->
+        <ItemsControl ItemsSource="{Binding Presets}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="t:SpeedPreset">
+              <ToggleButton Classes="pchip" Margin="0,0,6,6" Padding="12,6" Content="{Binding Label}"
+                            IsChecked="{Binding IsSelected, Mode=OneWay}" Click="OnPresetClick" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- any speed in between, in steps of 0.05 -->
+        <p:SliderRow Label="{DynamicResource panel.changeVideoSpeed.speed}" Minimum="0.25" Maximum="8" Step="0.05"
+                     DefaultValue="1" ValueFormat="0.00'×'" Value="{Binding Speed, Mode=TwoWay}" />
+
+        <!-- the length before and after; the sound keeps its pitch -->
+        <StackPanel Spacing="4">
+          <TextBlock Classes="pvalue" FontSize="18" Text="{Binding DurationText}" />
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.changeVideoSpeed.pitch}" IsVisible="{Binding HasAudio}" />
+        </StackPanel>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

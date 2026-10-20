@@ -46,12 +46,29 @@ public enum TriggerScope
     Anywhere,
 }
 
+/// <summary>
+/// Mandarina: which of the three wheels a gesture opens. Tapping another wheel's key while a wheel is open switches
+/// to it.
+/// </summary>
+public enum WheelMode
+{
+    /// <summary>Output formats (the donut toolbar of the files' profile).</summary>
+    Convert,
+    /// <summary>File tools: compress, remove metadata, split, merge, …</summary>
+    Tools,
+    /// <summary>File actions: share, float, copy, move, copy path, terminal. Work with folders and mixed selections.</summary>
+    Actions,
+}
+
 /// <summary>A user-configurable gesture that opens the donut toolbar.</summary>
 public sealed class TriggerGesture
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
     public bool Enabled { get; set; } = true;
     public TriggerKind Kind { get; set; } = TriggerKind.Drag;
+
+    /// <summary>The wheel this gesture opens (Mandarina).</summary>
+    public WheelMode Wheel { get; set; } = WheelMode.Convert;
     public ModifierKeys Modifiers { get; set; } = ModifierKeys.Ctrl;
     public TriggerMouseButton Button { get; set; } = TriggerMouseButton.Left;
 
@@ -71,14 +88,19 @@ public sealed class TriggerGesture
 
     public TriggerGesture Clone() => (TriggerGesture)MemberwiseClone();
 
-    /// <summary>Default gestures for the current OS.</summary>
+    /// <summary>
+    /// Default gestures for the current OS. Mandarina: start dragging files, then tap Shift for the
+    /// conversion wheel, Ctrl (Command on macOS) for tools or Alt (Control on macOS) for actions. Holding the key before
+    /// the drag starts works too.
+    /// </summary>
     public static List<TriggerGesture> Defaults()
     {
-        // On macOS Ctrl+click means right-click, and Option already means "copy" in Finder.
-        var dragModifier = OperatingSystem.IsMacOS() ? ModifierKeys.Alt : ModifierKeys.Ctrl;
+        var mac = OperatingSystem.IsMacOS();
         return
         [
-            new() { Kind = TriggerKind.Drag, Modifiers = dragModifier, Button = TriggerMouseButton.Left },
+            new() { Kind = TriggerKind.Drag, Modifiers = ModifierKeys.Shift, Button = TriggerMouseButton.Left, Wheel = WheelMode.Convert },
+            new() { Kind = TriggerKind.Drag, Modifiers = mac ? ModifierKeys.Meta : ModifierKeys.Ctrl, Button = TriggerMouseButton.Left, Wheel = WheelMode.Tools },
+            new() { Kind = TriggerKind.Drag, Modifiers = mac ? ModifierKeys.Ctrl : ModifierKeys.Alt, Button = TriggerMouseButton.Left, Wheel = WheelMode.Actions },
             new() { Kind = TriggerKind.KeyChord, Modifiers = ModifierKeys.Ctrl | ModifierKeys.Alt, Button = TriggerMouseButton.None, Key = "Space" },
         ];
     }

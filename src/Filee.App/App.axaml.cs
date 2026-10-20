@@ -19,6 +19,8 @@ namespace Filee.App;
 public partial class App : Application
 {
     private readonly List<string> _pendingConvertFiles = [];
+    private WheelMode _pendingWheel = WheelMode.Convert; // Mandarina
+    private string? _pendingPanel; // Mandarina
     private IDisposable? _convertDebounce;
     private bool _selectionPending;
 
@@ -38,9 +40,8 @@ public partial class App : Application
     {
         // macOS: "Convert with Filee" in Finder's right-click menu. Registered first, so a service picked while
         // Filee wasn't running is delivered as soon as it starts.
-        if (OperatingSystem.IsMacOS())
-            Filee.Platform.MacOS.MacOSServicesProvider.Register(files =>
-                Dispatcher.UIThread.Post(() => HandleCommandLine(CommandLine.Parse(["--convert", .. files]))));
+        PlatformLayers.RegisterMacServices(files =>
+            Dispatcher.UIThread.Post(() => HandleCommandLine(CommandLine.Parse(["--convert", .. files]))));
         var log = AppHost.Get<ILogger<App>>();
         var store = AppHost.Get<UserDataStore>();
         store.Load();
@@ -53,8 +54,10 @@ public partial class App : Application
         var triggers = AppHost.Get<TriggerService>();
         var radial = AppHost.Get<RadialController>();
         var platform = AppHost.Get<IPlatformServices>();
-        triggers.DragStarted += (_, e) => radial.ShowForDrag(e.X, e.Y);
+        triggers.DragStarted += (_, e) => radial.ShowForDrag(e.X, e.Y, e.Gesture?.Wheel ?? WheelMode.Convert);
         triggers.DragEnded += (_, _) => radial.OnDragGestureEnded();
+        triggers.WheelRequested += (_, e) => radial.SwitchWheel(e.Gesture?.Wheel ?? WheelMode.Convert);
+        triggers.DragCancelled += (_, _) => radial.CancelDrag();
         triggers.SelectionGesture += async (_, e) =>
         {
             if (_selectionPending || store.Settings.Paused)
@@ -65,7 +68,7 @@ public partial class App : Application
                 var files = OperatingSystem.IsMacOS()
                     ? await Task.Run(platform.GetFileManagerSelection) : platform.GetFileManagerSelection();
                 if (files.Count > 0 && !store.Settings.Paused)
-                    radial.ShowForFiles(e.X, e.Y, files);
+                    radial.ShowForFiles(e.X, e.Y, files, e.Gesture?.Wheel ?? WheelMode.Convert);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -85,19 +88,21 @@ public partial class App : Application
         // a drag gesture is on. The home page keeps a reminder until it is given. Asked once the main window is up:
         // asked earlier, the alert ends up behind it.
         if (OperatingSystem.IsMacOS() && triggers.NeedsPermission && !Program.Options.Background
-            && platform is Filee.Platform.MacOS.MacOSPlatformServices mac
+            && PlatformLayers.IsMac(platform)
             && store.Settings.Triggers.Any(t => t.Enabled && t.Kind == TriggerKind.Drag))
             DispatcherTimer.RunOnce(() =>
             {
                 if (OperatingSystem.IsMacOS() && triggers.NeedsPermission)
-                    mac.RequestAccessibilityPermission();
+                    PlatformLayers.RequestMacAccessibility(platform);
             }, TimeSpan.FromSeconds(1.5));
 
         store.SettingsChanged += (_, _) => ApplySettings(store.Settings);
 
         AppHost.Get<TrayService>().Create(this);
         AppHost.Get<WindowService>().EnsureToast();
-        AppHost.Get<ConversionService>().FeedbackDue += (_, _) => AppHost.Get<WindowService>().ShowFeedbackNotice();
+        // Mandarina: the ZIPs Share makes of folders go when the sheet closes; this clears what an earlier run left (it died first).
+        _ = Task.Run(Mandarina.FileActions.SweepLeftovers);
+        // Mandarina: no "star Filee on GitHub" prompt after a few conversions.
         AppHost.Get<WatchFolderService>().Start();
         // Once LibreOffice is installed: prepare its profiles while the user isn't converting yet.
         AppHost.Get<EngineDownloadService>().WarmUpInBackground(TimeSpan.FromSeconds(10));
@@ -139,7 +144,7 @@ public partial class App : Application
             AppHost.Get<WindowService>().ShowUpdateNotice(version);
         };
         updates.UpdateFailed += async (_, _) => await AppHost.Get<WindowService>().ShowUpdateFailedAsync();
-        updates.StartPeriodicChecks(() => store.Settings.CheckForUpdates, TimeSpan.FromSeconds(20));
+        // Mandarina: no periodic checks. They look at Filee's releases, and installing one would replace this fork.
         DispatcherTimer.RunOnce(() => NotifyEngineUpdates(store), TimeSpan.FromSeconds(25));
     }
 
@@ -172,7 +177,9 @@ public partial class App : Application
         var routesChanged = EngineEnvironment.LibreOfficeForSlides != settings.LibreOfficeForSlides
                             || EngineEnvironment.LibreOfficeForHwp != settings.LibreOfficeForHwp
                             || EngineEnvironment.LibreOfficeForDocuments != settings.LibreOfficeForDocuments
-                            || EngineEnvironment.LibreOfficeForSheets != settings.LibreOfficeForSheets;
+                            || EngineEnvironment.LibreOfficeForSheets != settings.LibreOfficeForSheets
+                            || EngineEnvironment.OfficeEnabled != settings.OfficeEnabled; // Mandarina
+        EngineEnvironment.OfficeEnabled = settings.OfficeEnabled; // Mandarina: the Microsoft Office engine's switch
         EngineEnvironment.LibreOfficeForSlides = settings.LibreOfficeForSlides;
         EngineEnvironment.LibreOfficeForHwp = settings.LibreOfficeForHwp;
         EngineEnvironment.LibreOfficeForDocuments = settings.LibreOfficeForDocuments;
@@ -207,6 +214,8 @@ public partial class App : Application
         {
             // Explorer may start one process per selected file: collect them for a moment, then open once.
             _pendingConvertFiles.AddRange(options.ConvertFiles);
+            _pendingWheel = options.Wheel; // Mandarina: --tools / --actions
+            _pendingPanel = options.PanelId; // Mandarina: --panel <id>
             _convertDebounce?.Dispose();
             _convertDebounce = DispatcherTimer.RunOnce(OpenPendingFiles, TimeSpan.FromMilliseconds(350));
             return;
@@ -259,7 +268,17 @@ public partial class App : Application
         var (x, y) = AppHost.Get<TriggerService>().LastCursor;
         if (x == 0 && y == 0 && AppHost.Get<WindowService>().Main is { } main)
             (x, y) = (main.Position.X + 200, main.Position.Y + 200);
-        AppHost.Get<RadialController>().ShowForFiles(x, y, files);
+        // Mandarina: --panel opens a tool's panel directly (scripts, tests); otherwise the wheel the options ask for.
+        if (_pendingPanel is { } panel)
+        {
+            AppHost.Get<Mandarina.Panels.PanelHost>().Open(panel, files.Where(File.Exists).ToList(), new PixelPoint(x, y));
+            _pendingPanel = null;
+        }
+        else
+        {
+            AppHost.Get<RadialController>().ShowForFiles(x, y, files, _pendingWheel);
+        }
+        _pendingWheel = WheelMode.Convert;
     }
 
 }

@@ -1,0 +1,81 @@
+<!-- Mandarina: the options of the JOIN panel: the clips in the order they are joined (thumbnail, name, length, and the arrows and
+     the cross that reorder them or take one out), then the size of the result and the total length. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.JoinVideosView"
+             x:DataType="t:JoinVideosPanel">
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="14">
+      <TextBlock Classes="plabel" Text="{DynamicResource panel.joinVideos.hint}" TextWrapping="Wrap" />
+
+      <!-- the list: a fixed height (four rows show), scrolled when the clips do not all fit -->
+      <Border Classes="pwell" Height="260">
+        <Panel>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Clips}" Margin="10,8">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="t:JoinRow">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="0,4">
+                    <Border Width="96" Height="54" CornerRadius="8" ClipToBounds="True" Background="#E2DAE6">
+                      <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Classes="pvalue" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="plabel" Text="{Binding DurationText}" IsVisible="{Binding !Unreadable}" />
+                      <TextBlock FontSize="12" Foreground="#C62828" Text="{DynamicResource panel.joinVideos.unreadable}"
+                                 IsVisible="{Binding Unreadable}" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Classes="pchip" Padding="10,7" Margin="4,0"
+                            ToolTip.Tip="{DynamicResource panel.joinVideos.up}" Click="OnUp">
+                      <PathIcon Width="12" Height="12" Data="M12 3 L20 11.5 L14.5 11.5 L14.5 21 L9.5 21 L9.5 11.5 L4 11.5 Z" />
+                    </Button>
+                    <Button Grid.Column="3" Classes="pchip" Padding="10,7" Margin="4,0"
+                            ToolTip.Tip="{DynamicResource panel.joinVideos.down}" Click="OnDown">
+                      <PathIcon Width="12" Height="12" Data="M12 21 L20 12.5 L14.5 12.5 L14.5 3 L9.5 3 L9.5 12.5 L4 12.5 Z" />
+                    </Button>
+                    <Button Grid.Column="4" Classes="pchip" Padding="10,7" Margin="4,0"
+                            ToolTip.Tip="{DynamicResource panel.joinVideos.remove}" Click="OnRemove">
+                      <PathIcon Width="11" Height="11" Data="M6.4 4.6 L12 10.2 L17.6 4.6 L19.4 6.4 L13.8 12 L19.4 17.6 L17.6 19.4 L12 13.8 L6.4 19.4 L4.6 17.6 L10.2 12 L4.6 6.4 Z" />
+                    </Button>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.joinVideos.loading}" HorizontalAlignment="Center"
+                     VerticalAlignment="Center" IsVisible="{Binding IsLoading}" />
+          <TextBlock Classes="plabel" Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     TextWrapping="Wrap" Margin="24" IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </Panel>
+      </Border>
+
+      <!-- the size of the result, and the length of the clips together -->
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.joinVideos.size}" />
+          <ItemsControl ItemsSource="{Binding Sizes}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="t:JoinSizeOption">
+                <ToggleButton Classes="pchip" Margin="0,0,6,6" Padding="12,6" Content="{Binding Label}"
+                              IsChecked="{Binding IsSelected, Mode=OneWay}" Click="OnSizeClick" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Bottom">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.joinVideos.total}" />
+          <TextBlock Classes="pvalue" FontSize="18" Text="{Binding TotalDurationText}" />
+        </StackPanel>
+      </Grid>
+
+      <TextBlock Classes="plabel" Text="{Binding NoteText}" TextWrapping="Wrap"
+                 IsVisible="{Binding NoteText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+  </Border>
+</UserControl>

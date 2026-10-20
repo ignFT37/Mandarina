@@ -10,7 +10,7 @@ public partial class LocalizationTests
     {
         get
         {
-            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            var dir = new DirectoryInfo(TestPaths.Start);
             while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Filee.slnx")))
                 dir = dir.Parent;
             return Path.Combine(dir!.FullName, "src", "Filee.App", "Assets", "i18n");
@@ -20,7 +20,7 @@ public partial class LocalizationTests
     private static Dictionary<string, string> Load(string code) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(I18nDirectory, code + ".json")))!;
 
-    public static TheoryData<string> Languages => new() { "ko", "zh-CN" };
+    public static TheoryData<string> Languages => new() { "es", "ko", "zh-CN" };
 
     [Theory]
     [MemberData(nameof(Languages))]

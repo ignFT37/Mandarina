@@ -1,0 +1,64 @@
+<!-- Mandarina: the options of the SUBTITLES panel: the language, what to save (TXT, SRT, VTT), for a video burning the subtitles in
+     (and how big), where the model runs, and what it is doing while it works. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.SubtitlesView"
+             x:DataType="t:SubtitlesPanel">
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="16">
+      <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+
+      <!-- the language -->
+      <Grid ColumnDefinitions="112,*">
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.subtitles.language}" VerticalAlignment="Center" />
+        <ComboBox Grid.Column="1" MinWidth="240" HorizontalAlignment="Left" MaxDropDownHeight="280"
+                  ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="t:WhisperLanguage">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </Grid>
+
+      <!-- what to save -->
+      <Grid ColumnDefinitions="112,*">
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.subtitles.save}" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+          <ToggleButton Classes="pchip" IsChecked="{Binding SaveText}" Content="TXT" />
+          <ToggleButton Classes="pchip" IsChecked="{Binding SaveSrt}" Content="SRT" />
+          <ToggleButton Classes="pchip" IsChecked="{Binding SaveVtt}" Content="VTT" />
+        </StackPanel>
+      </Grid>
+
+      <!-- burning the subtitles into a video -->
+      <StackPanel Spacing="12" IsVisible="{Binding HasVideo}">
+        <CheckBox IsChecked="{Binding Burn}" Content="{DynamicResource panel.subtitles.burn}" />
+        <Grid ColumnDefinitions="112,*" IsVisible="{Binding ShowSize}">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.subtitles.size}" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+            <Button Classes="pchip" Classes.primary="{Binding IsSmall}" Command="{Binding SetSmallCommand}"
+                    Content="{DynamicResource panel.subtitles.size_small}" />
+            <Button Classes="pchip" Classes.primary="{Binding IsMedium}" Command="{Binding SetMediumCommand}"
+                    Content="{DynamicResource panel.subtitles.size_medium}" />
+            <Button Classes="pchip" Classes.primary="{Binding IsLarge}" Command="{Binding SetLargeCommand}"
+                    Content="{DynamicResource panel.subtitles.size_large}" />
+          </StackPanel>
+        </Grid>
+      </StackPanel>
+
+      <!-- where it runs · what it is doing -->
+      <StackPanel Spacing="8">
+        <CheckBox IsChecked="{Binding UseGpu}" Content="{DynamicResource panel.subtitles.use_gpu}" IsVisible="{Binding HasGpu}" />
+        <TextBlock Classes="plabel" Text="{Binding DeviceText}" TextWrapping="Wrap"
+                   IsVisible="{Binding DeviceText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Classes="plabel" Text="{Binding MissingText}" TextWrapping="Wrap" Foreground="#C0392B"
+                   IsVisible="{Binding MissingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+      <Border Classes="pwell" Padding="14,11" IsVisible="{Binding Phase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="{Binding Phase}" TextWrapping="Wrap" FontSize="12.5" />
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -1,0 +1,98 @@
+<!-- Mandarina: the options of the ADD BG panel: the live preview on the left, the background, the photo's padding, corners and canvas shape, and the shadow on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.FrameImageView"
+             x:DataType="t:FrameImagePanel">
+  <UserControl.Resources>
+    <!-- Fluent's slider is 32 px high: with six of them the options would not fit the window. -->
+    <x:Double x:Key="SliderHorizontalHeight">22</x:Double>
+  </UserControl.Resources>
+  <Grid ColumnDefinitions="*,468" ColumnSpacing="14">
+
+    <!-- the live preview -->
+    <Border Classes="pwell">
+      <Panel>
+        <Image Source="{Binding Preview}" Stretch="Uniform" Margin="14" MaxHeight="420" />
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.frameImage.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding IsLoading}" />
+        <TextBlock Classes="plabel" Text="{Binding LoadError}" TextWrapping="Wrap" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Classes="plabel" Text="{Binding PreviewError}" TextWrapping="Wrap" Margin="14,0,14,8" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                   IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </Panel>
+    </Border>
+
+    <StackPanel Grid.Column="1" Spacing="10">
+
+      <!-- background: colour, gradient or picture (as tall as the tallest, so the cards below stay put when the kind changes) -->
+      <Border Classes="pcard" Padding="16,13" MinHeight="164">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="112,*">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.frameImage.background}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Classes="pchip" Classes.primary="{Binding IsColor}" Command="{Binding SetBackgroundCommand}"
+                      CommandParameter="{x:Static t:FrameBackground.Color}" Content="{DynamicResource panel.frameImage.kind_color}" />
+              <Button Classes="pchip" Classes.primary="{Binding IsGradient}" Command="{Binding SetBackgroundCommand}"
+                      CommandParameter="{x:Static t:FrameBackground.Gradient}" Content="{DynamicResource panel.frameImage.kind_gradient}" />
+              <Button Classes="pchip" Classes.primary="{Binding IsImage}" Command="{Binding SetBackgroundCommand}"
+                      CommandParameter="{x:Static t:FrameBackground.Image}" Content="{DynamicResource panel.frameImage.kind_image}" />
+            </StackPanel>
+          </Grid>
+          <t:SwatchPicker Hex="{Binding Primary, Mode=TwoWay}" IsVisible="{Binding ShowsPrimary}" />
+          <t:SwatchPicker Hex="{Binding Secondary, Mode=TwoWay}" IsVisible="{Binding IsGradient}" />
+          <p:SliderRow Label="{DynamicResource panel.frameImage.angle}" Minimum="0" Maximum="360" DefaultValue="135"
+                       ValueFormat="0'°'" Value="{Binding Angle}" IsVisible="{Binding IsGradient}" />
+          <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsImage}" ColumnSpacing="12">
+            <Button Classes="pchip primary" Click="OnPickPicture" Content="{DynamicResource panel.frameImage.choose}" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock Classes="plabel" Text="{Binding PictureName}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="plabel" Text="{Binding PictureError}" TextWrapping="Wrap" Foreground="#D63A2F"
+                         IsVisible="{Binding PictureError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- the photo: padding, corners, canvas shape -->
+      <Border Classes="pcard" Padding="16,13">
+        <StackPanel Spacing="8">
+          <p:SliderRow Label="{DynamicResource panel.frameImage.padding}" Minimum="0" Maximum="40" DefaultValue="10"
+                       ValueFormat="0'%'" Value="{Binding Padding}" />
+          <p:SliderRow Label="{DynamicResource panel.frameImage.corners}" Minimum="0" Maximum="50" DefaultValue="4"
+                       ValueFormat="0'%'" Value="{Binding Corners}" />
+          <Grid ColumnDefinitions="112,*">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.frameImage.ratio}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:FrameAspect.Auto}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:FrameAspect.Auto}" Content="{DynamicResource panel.frameImage.ratio_auto}" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:FrameAspect.Square}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:FrameAspect.Square}" Content="1:1" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:FrameAspect.Wide}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:FrameAspect.Wide}" Content="16:9" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:FrameAspect.Portrait}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:FrameAspect.Portrait}" Content="4:5" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:FrameAspect.Tall}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:FrameAspect.Tall}" Content="9:16" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- the shadow -->
+      <Border Classes="pcard" Padding="16,13">
+        <StackPanel Spacing="8">
+          <ToggleButton Classes="pchip" HorizontalAlignment="Left" IsChecked="{Binding Shadow, Mode=TwoWay}"
+                        Content="{DynamicResource panel.frameImage.shadow}" />
+          <p:SliderRow Label="{DynamicResource panel.frameImage.blur}" Minimum="0" Maximum="60" DefaultValue="24"
+                       Value="{Binding ShadowBlur}" IsEnabled="{Binding Shadow}" />
+          <p:SliderRow Label="{DynamicResource panel.frameImage.opacity}" Minimum="0" Maximum="100" DefaultValue="40"
+                       ValueFormat="0'%'" Value="{Binding ShadowOpacity}" IsEnabled="{Binding Shadow}" />
+          <p:SliderRow Label="{DynamicResource panel.frameImage.offset}" Minimum="0" Maximum="60" DefaultValue="14"
+                       Value="{Binding ShadowOffset}" IsEnabled="{Binding Shadow}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

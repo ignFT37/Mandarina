@@ -8,7 +8,8 @@ namespace Filee.Engines.Infrastructure;
 
 /// <summary>One download from engines.json.</summary>
 /// <param name="Kind">
-/// Archive format: zip, tar.gz, tar.xz, dmg, msi, oxt or conda.
+/// Archive format: zip, tar.gz, tar.xz, dmg, msi, oxt or conda; or file for a single file that is kept as it is (Mandarina:
+/// the speech models).
 /// </param>
 /// <param name="Size">Download size in bytes.</param>
 public sealed record EngineComponent(string Id, string Version, string Url, string Sha256, long Size, string Kind);
@@ -38,8 +39,19 @@ public static class EngineDownloads
         // Ghostscript from conda-forge plus the Microsoft C++ runtime it was built against (copied next to it).
         new("ghostscript", OperatingSystem.IsWindows() ? ["ghostscript", "vcruntime"] : ["ghostscript"], 31_000_000, ["ghostscript"]),
         new("ffmpeg", ["ffmpeg"], 272_000_000, ["ffmpeg"]),
+        // Mandarina: the speech-to-text models for the transcription tools; FFmpeg's whisper filter reads them. No converter uses them.
+        // The large one is for a PC with a dedicated graphics card; the small one (a folder of its own: a package replaces its whole
+        // folder) is for a PC without one, where it runs about three times as fast. The tools pick between them (WhisperModels.For).
+        new("whisper", ["whisper"], 574_041_195, []),
+        new("whisper-small", ["whisper-small"], 264_464_607, []),
         new("calibre", ["calibre"], 663_000_000, ["calibre"]),
     ];
+
+    /// <summary>
+    /// Mandarina: true when the engine <paramref name="converterId"/> comes from one of the optional downloads above. The others
+    /// (the libraries inside the program, 7-Zip and rhwp in the install folder) ship with it: Settings → Engines says "Included".
+    /// </summary>
+    public static bool ProvidedByPackage(string converterId) => Packages.Any(package => package.ConverterIds.Contains(converterId));
 
     /// <summary>Total download size of a package in bytes.</summary>
     public static long DownloadSize(EnginePackage package) => package.Components.Sum(c => Components.GetValueOrDefault(c)?.Size ?? 0);

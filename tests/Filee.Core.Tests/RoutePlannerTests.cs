@@ -51,6 +51,37 @@ public class RoutePlannerTests
         Assert.Equal(["pdf→svg"], planner.Plan("pdf", "svg")!.Steps.Select(s => $"{s.From}→{s.To}"));
     }
 
+    // Mandarina: from Filee's feature/pdf-to-pptx (e52db60).
+    [Fact]
+    public void Direct_only_edges_are_never_a_step_of_a_longer_route()
+    {
+        // PDF → PPTX puts pictures of the pages on slides: only for a PDF the user asked to turn into PPTX.
+        var slides = new FakeConverter("slides", new ConversionEdge("pdf", "pptx", DirectOnly: true));
+        var word = new FakeConverter("word", new ConversionEdge("docx", "pdf"));
+        var office = new FakeConverter("office", new ConversionEdge("pptx", "odp"), new ConversionEdge("pptx", "ppsx"));
+        var planner = new RoutePlanner([slides, word, office]);
+
+        Assert.Equal(["pdf→pptx"], planner.Plan("pdf", "pptx")!.Steps.Select(s => $"{s.From}→{s.To}"));
+        Assert.Null(planner.Plan("docx", "pptx")); // not after another step
+        Assert.Null(planner.Plan("pdf", "odp")); // nor before one
+        Assert.Null(planner.Plan("pdf", "ppsx"));
+        Assert.Equal(["pptx→odp"], planner.Plan("pptx", "odp")!.Steps.Select(s => $"{s.From}→{s.To}"));
+    }
+
+    // Mandarina: a first-step-only edge is for the file the user dropped, never for what an earlier step made of another file.
+    [Fact]
+    public void First_step_only_edges_are_never_used_after_another_step()
+    {
+        var office = new FakeConverter("office", new ConversionEdge("docx", "pdf", 1, FirstStepOnly: true), new ConversionEdge("docx", "doc", 1, FirstStepOnly: true));
+        var writer = new FakeConverter("writer", new ConversionEdge("xlsx", "docx"), new ConversionEdge("md", "docx"));
+        var planner = new RoutePlanner([office, writer]);
+
+        Assert.Equal(["docx→pdf"], planner.Plan("docx", "pdf")!.Steps.Select(s => $"{s.From}→{s.To}"));
+        Assert.Equal(["xlsx→docx"], planner.Plan("xlsx", "docx")!.Steps.Select(s => $"{s.From}→{s.To}"));
+        Assert.Null(planner.Plan("xlsx", "pdf")); // xlsx → docx → (Office) would use it as a second step
+        Assert.Null(planner.Plan("md", "doc"));
+    }
+
     [Fact]
     public void Cheaper_route_wins()
     {

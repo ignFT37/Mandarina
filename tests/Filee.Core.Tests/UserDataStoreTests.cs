@@ -217,7 +217,7 @@ public class UserDataStoreTests
         var presets = BuiltInData.CreatePresets()
             .Where(p => BuiltInData.CatalogPresets().Concat(BuiltInData.CodecAndSubtitlePresets()).Concat(BuiltInData.ModelPresets()).All(c => c.Id != p.Id)).ToList();
         var catalogIds = BuiltInData.CatalogProfiles().Select(p => p.Id).Append("subtitles").Append("models").ToHashSet();
-        var profiles = BuiltInData.CreateProfiles().Where(p => !catalogIds.Contains(p.Id)).ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => !catalogIds.Contains(p.Id)).ToList();
         profiles.Single(p => p.Id == "images").Extensions = ["png", "jpg"];
         profiles.Single(p => p.Id == "pdf").PresetIds.Remove("to-docx");
         profiles.Single(p => p.Id == "mixed").PresetIds.Remove("zip-all");
@@ -249,7 +249,7 @@ public class UserDataStoreTests
         // As written by 1.3.0: no HWP preset, and the donuts below without the targets 1.3.1 added.
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => p.Id == "to-hwp");
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
         foreach (var profile in profiles)
             profile.PresetIds.Remove("to-hwp");
         profiles.Single(p => p.Id == "pdf").PresetIds.RemoveAll(id => id is "to-md" or "to-epub");
@@ -260,7 +260,7 @@ public class UserDataStoreTests
 
         // The same donuts as a new install.
         Assert.NotNull(presets.SingleOrDefault(p => p.Id == "to-hwp"));
-        foreach (var expected in BuiltInData.CreateProfiles())
+        foreach (var expected in BuiltInData.FileeProfiles())
             Assert.Equal(expected.PresetIds, profiles.Single(p => p.Id == expected.Id).PresetIds);
         Assert.False(SettingsMigrations.ApplyToLibrary(6, presets, profiles)); // once only
     }
@@ -271,7 +271,7 @@ public class UserDataStoreTests
         // As written by 1.9.0: no "Long image" or HEIC preset, and the PDF donut without the long image.
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => p.Id is "pdf-long-image" or "to-heic");
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
         var pdf = profiles.Single(p => p.Id == "pdf");
         pdf.PresetIds.Remove("pdf-long-image");
 
@@ -291,7 +291,7 @@ public class UserDataStoreTests
         // As written by 1.10.x: no "Remove background" preset.
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => p.Id == "remove-background");
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
 
         Assert.True(SettingsMigrations.ApplyToLibrary(9, presets, profiles));
 
@@ -309,7 +309,7 @@ public class UserDataStoreTests
         // donut; and a donut of the user that already takes YAML.
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => BuiltInData.DataPresets().Any(d => d.Id == p.Id));
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
         profiles.RemoveAll(p => p.Id == "data");
         profiles.Single(p => p.Id == "office").Extensions.Remove("msg");
         profiles.Single(p => p.Id == "spreadsheets").PresetIds.Remove("to-json");
@@ -354,7 +354,7 @@ public class UserDataStoreTests
     {
         // As written with schema 12: the images donut knows no APNG, QOI, DICOM or .hif; a donut of the user takes DDS.
         var presets = BuiltInData.CreatePresets();
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
         var images = profiles.Single(p => p.Id == "images");
         images.Extensions.RemoveAll(e => e is "apng" or "qoi" or "dcm" or "hif" or "dds");
         profiles.Insert(0, new ToolbarProfile { Id = "game", Name = "Game textures", Extensions = ["dds"] });
@@ -376,7 +376,7 @@ public class UserDataStoreTests
         // the audio extensions of that time, and a donut of the user that already takes .ape.
         var added = BuiltInData.CodecAndSubtitlePresets().Select(p => p.Id).ToHashSet();
         var presets = BuiltInData.CreatePresets().Where(p => !added.Contains(p.Id)).ToList();
-        var profiles = BuiltInData.CreateProfiles().Where(p => p.Id != "subtitles").ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => p.Id != "subtitles").ToList();
         foreach (var profile in profiles)
             profile.PresetIds.RemoveAll(added.Contains);
         var audio = profiles.Single(p => p.Id == "audio");
@@ -393,7 +393,7 @@ public class UserDataStoreTests
         Assert.Equal(ids.IndexOf("audio") + 1, ids.IndexOf("subtitles"));
         Assert.Equal(BuiltInData.SubtitleProfile().PresetIds, profiles.Single(p => p.Id == "subtitles").PresetIds);
         Assert.Contains("smi", profiles.Single(p => p.Id == "subtitles").Extensions);
-        Assert.Equal(BuiltInData.CreateProfiles().Single(p => p.Id == "video").PresetIds, profiles.Single(p => p.Id == "video").PresetIds);
+        Assert.Equal(BuiltInData.FileeProfiles().Single(p => p.Id == "video").PresetIds, profiles.Single(p => p.Id == "video").PresetIds);
         Assert.Equal(VideoCodec.Hevc, presets.Single(p => p.Id == "mp4-hevc").Media.VideoCodec);
         Assert.Equal(AudioCodec.Alac, presets.Single(p => p.Id == "to-alac").Media.AudioCodec);
         Assert.DoesNotContain(profiles, p => p.PresetIds.Contains("to-alac") || p.PresetIds.Contains("mp4-av1"));
@@ -409,7 +409,7 @@ public class UserDataStoreTests
         string[] added = ["org", "adoc", "typ", "mediawiki", "wiki", "dbk", "ipynb", "fodt", "ott", "cwk", "602", "ots", "fods", "otp", "fodp", "fodg", "kepub.epub"];
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => p.Id == "to-kepub");
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
         foreach (var profile in profiles)
         {
             profile.PresetIds.Remove("to-kepub");
@@ -430,7 +430,7 @@ public class UserDataStoreTests
         Assert.Contains("fods", profiles.Single(p => p.Id == "spreadsheets").Extensions);
         Assert.Contains("otp", profiles.Single(p => p.Id == "presentations").Extensions);
         Assert.Contains("fodg", profiles.Single(p => p.Id == "vector").Extensions);
-        foreach (var expected in BuiltInData.CreateProfiles())
+        foreach (var expected in BuiltInData.FileeProfiles())
             Assert.Equal(expected.PresetIds, profiles.Single(p => p.Id == expected.Id).PresetIds);
         Assert.False(SettingsMigrations.ApplyToLibrary(10, presets, profiles)); // once only
     }
@@ -441,7 +441,7 @@ public class UserDataStoreTests
         // As written with schema 14: no 3D formats.
         var modelIds = BuiltInData.ModelPresets().Select(p => p.Id).ToHashSet();
         var presets = BuiltInData.CreatePresets().Where(p => !modelIds.Contains(p.Id)).ToList();
-        var profiles = BuiltInData.CreateProfiles().Where(p => p.Id != "models").ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => p.Id != "models").ToList();
 
         Assert.True(SettingsMigrations.ApplyToLibrary(14, presets, profiles));
 
@@ -459,7 +459,7 @@ public class UserDataStoreTests
     public void The_3d_donut_leaves_out_extensions_a_profile_of_the_user_takes()
     {
         var presets = BuiltInData.CreatePresets();
-        var profiles = BuiltInData.CreateProfiles().Where(p => p.Id != "models").ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => p.Id != "models").ToList();
         profiles.Insert(0, new ToolbarProfile { Id = "printing", Name = "Printing", Extensions = ["stl", "3mf"] });
 
         Assert.True(SettingsMigrations.ApplyToLibrary(14, presets, profiles));
@@ -473,7 +473,7 @@ public class UserDataStoreTests
         // As written before tracing: no trace presets, and the images donut without them.
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => p.Id is "trace-svg" or "trace-line-art");
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
         var images = profiles.Single(p => p.Id == "images");
         images.PresetIds.RemoveAll(id => id is "trace-svg" or "trace-line-art");
 
@@ -482,7 +482,7 @@ public class UserDataStoreTests
         Assert.Equal(TracingMode.Color, presets.Single(p => p.Id == "trace-svg").Trace.Mode);
         Assert.Equal(TracingMode.BlackAndWhite, presets.Single(p => p.Id == "trace-line-art").Trace.Mode);
         Assert.All(presets.Where(p => p.Id.StartsWith("trace-", StringComparison.Ordinal)), p => Assert.Equal("svg", p.TargetFormat));
-        Assert.Equal(BuiltInData.CreateProfiles().Single(p => p.Id == "images").PresetIds, images.PresetIds);
+        Assert.Equal(BuiltInData.FileeProfiles().Single(p => p.Id == "images").PresetIds, images.PresetIds);
         Assert.False(SettingsMigrations.ApplyToLibrary(15, presets, profiles)); // once only
     }
 
@@ -509,7 +509,7 @@ public class UserDataStoreTests
     {
         var presets = BuiltInData.CreatePresets();
         presets.RemoveAll(p => p.Id is "rotate-left" or "rotate-right" or "rotate-180" or "flip-horizontal" or "flip-vertical" or "rotate" or "flip");
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
 
         Assert.True(SettingsMigrations.ApplyToLibrary(16, presets, profiles));
 
@@ -558,7 +558,7 @@ public class UserDataStoreTests
         var rotate = presets.Single(p => p.Id == "rotate");
         rotate.Kind = PresetKind.Convert;
         rotate.SubPresetIds = [];
-        var profiles = BuiltInData.CreateProfiles();
+        var profiles = BuiltInData.FileeProfiles();
 
         Assert.True(SettingsMigrations.ApplyToLibrary(16, presets, profiles));
 
@@ -577,7 +577,7 @@ public class UserDataStoreTests
         // count as "taken" when the catalog donuts and extensions are added.
         var presets = BuiltInData.CreatePresets().Where(p => BuiltInData.CatalogPresets().All(c => c.Id != p.Id)).ToList();
         var catalogIds = BuiltInData.CatalogProfiles().Select(p => p.Id).Append("models").ToHashSet();
-        var profiles = BuiltInData.CreateProfiles().Where(p => !catalogIds.Contains(p.Id)).ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => !catalogIds.Contains(p.Id)).ToList();
         profiles.Single(p => p.Id == "images").Extensions = ["png"];
         profiles.Add(new ToolbarProfile { Id = "music-mix", Name = "Music mix", IsFallback = true, Extensions = ["mp3", "jpg"] });
 
@@ -630,7 +630,7 @@ public class UserDataStoreTests
     [Fact]
     public void Spreadsheet_profile_is_not_added_when_a_user_profile_takes_spreadsheets()
     {
-        var profiles = BuiltInData.CreateProfiles().Where(p => p.Id is not ("spreadsheets" or "presentations")).ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => p.Id is not ("spreadsheets" or "presentations")).ToList();
         profiles.Insert(0, new ToolbarProfile { Id = "mine", Name = "Mine", Extensions = ["xlsx"] });
 
         SettingsMigrations.ApplyToLibrary(4, BuiltInData.CreatePresets(), profiles);
@@ -643,7 +643,7 @@ public class UserDataStoreTests
     [Fact]
     public void Text_profile_is_not_added_when_a_profile_already_takes_markdown()
     {
-        var profiles = BuiltInData.CreateProfiles().Where(p => p.Id != "text").ToList();
+        var profiles = BuiltInData.FileeProfiles().Where(p => p.Id != "text").ToList();
         profiles[0].Extensions.Add("md");
 
         SettingsMigrations.ApplyToLibrary(3, BuiltInData.CreatePresets(), profiles);

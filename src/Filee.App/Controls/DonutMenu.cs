@@ -44,6 +44,9 @@ public sealed class DonutItem
 
     /// <summary>A group with something to fan out.</summary>
     public bool CanExpand => Children is { Count: > 0 };
+
+    /// <summary>Mandarina: line icon (24×24, see WheelIcons) drawn above a small label, as on the tool wheels.</summary>
+    public Geometry? Icon { get; init; }
 }
 
 /// <summary>Donut-shaped menu control.</summary>
@@ -84,6 +87,17 @@ public sealed partial class DonutMenu : Control
         AvaloniaProperty.Register<DonutMenu, IBrush?>(nameof(SecondaryForeground), Brushes.Gray);
     public static readonly StyledProperty<IBrush?> DangerBrushProperty =
         AvaloniaProperty.Register<DonutMenu, IBrush?>(nameof(DangerBrush), Brushes.IndianRed);
+
+    /// <summary>
+    /// Mandarina: the glass look of the live wheel. Frosted glass ring, rounded petals with a pale glass fill, the
+    /// highlighted petal in orange, labels in black and a small pill in the hole. The editor page keeps the themed look.
+    /// </summary>
+    public static readonly StyledProperty<bool> GlassProperty =
+        AvaloniaProperty.Register<DonutMenu, bool>(nameof(Glass));
+
+    /// <summary>Mandarina: the blurred screen behind the control (same size as the control), for <see cref="Glass"/>.</summary>
+    public static readonly StyledProperty<IImage?> BackdropProperty =
+        AvaloniaProperty.Register<DonutMenu, IImage?>(nameof(Backdrop));
 
     /// <summary>Gap between slices in pixels (keeps the donut "full" while separating slices).</summary>
     private const double GapPixels = 3;
@@ -127,7 +141,8 @@ public sealed partial class DonutMenu : Control
         AffectsMeasure<DonutMenu>(OuterRadiusProperty, ReserveSubRingProperty);
         AffectsRender<DonutMenu>(HoleRatioProperty, SliceOpacityProperty, CenterTitleProperty, CenterSubtitleProperty,
             IsEditModeProperty, SliceBrushProperty, SliceBorderBrushProperty, CenterBrushProperty, AccentBrushProperty,
-            OnAccentBrushProperty, ForegroundProperty, SecondaryForegroundProperty, SuccessBrushProperty);
+            OnAccentBrushProperty, ForegroundProperty, SecondaryForegroundProperty, SuccessBrushProperty,
+            GlassProperty, BackdropProperty);
         ItemsProperty.Changed.AddClassHandler<DonutMenu>((d, _) => d.OnItemsChanged());
     }
 
@@ -164,6 +179,8 @@ public sealed partial class DonutMenu : Control
     public IBrush? Foreground { get => GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
     public IBrush? SecondaryForeground { get => GetValue(SecondaryForegroundProperty); set => SetValue(SecondaryForegroundProperty, value); }
     public IBrush? DangerBrush { get => GetValue(DangerBrushProperty); set => SetValue(DangerBrushProperty, value); }
+    public bool Glass { get => GetValue(GlassProperty); set => SetValue(GlassProperty, value); }
+    public IImage? Backdrop { get => GetValue(BackdropProperty); set => SetValue(BackdropProperty, value); }
 
     /// <summary>True while an external drag hovers the hole (drop = cancel).</summary>
     public bool IsCenterHot => _externalCenterHot;
@@ -796,6 +813,11 @@ public sealed partial class DonutMenu : Control
         if (_progressMode)
         {
             RenderProgress(context, center, r1, r2, typeface, typefaceRegular);
+            return;
+        }
+        if (Glass && !IsEditMode)
+        {
+            RenderGlass(context, center, r1, r2, typeface, typefaceRegular);
             return;
         }
 

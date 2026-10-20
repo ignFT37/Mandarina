@@ -15,8 +15,8 @@ labels: bug
 **Files involved** (formats, sizes — attach a sample if you can share it)
 
 **Environment**
-- Filee version (Settings → About):
+- Mandarina version (Settings → About):
 - Windows version:
 - Engines page status (screenshot helps):
 
-**Log** – `%APPDATA%\Filee\logs\filee-<date>.log` (last lines)
+**Log** – `%APPDATA%\Mandarina\logs\filee-<date>.log` (last lines)

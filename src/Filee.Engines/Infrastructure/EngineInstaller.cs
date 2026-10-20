@@ -205,6 +205,12 @@ public sealed class EngineInstaller
                     UnpackConda(file, staging, cancellationToken);
                     Replace(component.Id, staging);
                     break;
+                case "file":
+                    // Mandarina: one data file (the speech model), not an archive: it keeps the name its URL gives it.
+                    Directory.CreateDirectory(staging);
+                    File.Move(file, Path.Combine(staging, Path.GetFileName(new Uri(component.Url).AbsolutePath)));
+                    Replace(component.Id, staging);
+                    break;
                 case "oxt":
                     // LibreOffice registers bundled extensions (plain folders under share/extensions) on start-up.
                     var extensions = Path.Combine(FolderOf("libreoffice"), "share", "extensions");

@@ -1,0 +1,141 @@
+<!-- Mandarina: the options of the COLLAGE panel: the live preview on the left; on the right the photos in order (up / down / remove)
+     and the layout, spacing, corners, background, canvas shape and size. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.CreateCollageView"
+             x:DataType="t:CreateCollagePanel">
+  <UserControl.Resources>
+    <!-- Fluent's slider is 32 px high: the options would not fit the window. -->
+    <x:Double x:Key="SliderHorizontalHeight">22</x:Double>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <!-- the small round up / down / remove buttons of a photo's row -->
+    <Style Selector="Button.pmini">
+      <Setter Property="Foreground" Value="{DynamicResource PanelMuted}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border x:Name="Bg" Width="26" Height="26" CornerRadius="13" Background="Transparent">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}"
+                              TextElement.Foreground="{TemplateBinding Foreground}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.pmini:pointerover /template/ Border#Bg">
+      <Setter Property="Background" Value="#EFE9F0" />
+    </Style>
+    <Style Selector="Button.pmini:disabled /template/ Border#Bg">
+      <Setter Property="Opacity" Value="0.3" />
+    </Style>
+    <!-- a photo that could not be read -->
+    <Style Selector="TextBlock.name.failed">
+      <Setter Property="Foreground" Value="#D63A2F" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="*,468" ColumnSpacing="14">
+
+    <!-- the live preview -->
+    <Border Classes="pwell">
+      <Panel>
+        <Image Source="{Binding Preview}" Stretch="Uniform" Margin="14" MaxHeight="420" />
+        <TextBlock Classes="plabel" Text="{Binding Hint}" TextWrapping="Wrap" Margin="24,0,24,10" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                   IsVisible="{Binding Hint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Classes="plabel" Text="{Binding PreviewError}" TextWrapping="Wrap" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding PreviewError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </Panel>
+    </Border>
+
+    <StackPanel Grid.Column="1" Spacing="10">
+
+      <!-- the photos, in collage order -->
+      <Border Classes="pcard" Padding="16,12">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.createCollage.order}" />
+            <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding PhotoCountText}" />
+          </Grid>
+          <ScrollViewer MaxHeight="156" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,12,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="t:CollageItem">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="4" Height="36" Margin="0,0,0,4">
+                    <Border Width="36" Height="36" CornerRadius="8" ClipToBounds="True" Background="#EFE9F0" Margin="0,0,6,0">
+                      <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                    </Border>
+                    <TextBlock Grid.Column="1" Classes="name" Classes.failed="{Binding IsFailed}" Text="{Binding Name}" ToolTip.Tip="{Binding Path}"
+                               FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="2" Classes="pmini" Command="{Binding MoveUpCommand}" ToolTip.Tip="{DynamicResource panel.createCollage.up}">
+                      <PathIcon Width="12" Height="12" Data="M12 7.5 L19.5 15 L18 16.5 L12 10.5 L6 16.5 L4.5 15 Z" />
+                    </Button>
+                    <Button Grid.Column="3" Classes="pmini" Command="{Binding MoveDownCommand}" ToolTip.Tip="{DynamicResource panel.createCollage.down}">
+                      <PathIcon Width="12" Height="12" Data="M12 16.5 L19.5 9 L18 7.5 L12 13.5 L6 7.5 L4.5 9 Z" />
+                    </Button>
+                    <Button Grid.Column="4" Classes="pmini" Command="{Binding RemoveCommand}" ToolTip.Tip="{DynamicResource panel.createCollage.remove}">
+                      <PathIcon Width="9" Height="9" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+
+      <!-- layout, spacing, corners, background, canvas shape, size -->
+      <Border Classes="pcard" Padding="16,13">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="112,*">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.createCollage.layout}" VerticalAlignment="Center" />
+            <WrapPanel Grid.Column="1" ItemSpacing="6" LineSpacing="6">
+              <Button Classes="pchip" Classes.primary="{Binding Layout, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageStyle.Grid}}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static t:CollageStyle.Grid}" Content="{DynamicResource panel.createCollage.layout_grid}" />
+              <Button Classes="pchip" Classes.primary="{Binding Layout, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageStyle.Row}}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static t:CollageStyle.Row}" Content="{DynamicResource panel.createCollage.layout_row}" />
+              <Button Classes="pchip" Classes.primary="{Binding Layout, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageStyle.Column}}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static t:CollageStyle.Column}" Content="{DynamicResource panel.createCollage.layout_column}" />
+              <Button Classes="pchip" Classes.primary="{Binding Layout, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageStyle.Featured}}"
+                      Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static t:CollageStyle.Featured}" Content="{DynamicResource panel.createCollage.layout_featured}" />
+            </WrapPanel>
+          </Grid>
+          <p:SliderRow Label="{DynamicResource panel.createCollage.spacing}" Minimum="0" Maximum="60" DefaultValue="12"
+                       ValueFormat="0' px'" Value="{Binding Spacing}" />
+          <p:SliderRow Label="{DynamicResource panel.createCollage.corners}" Minimum="0" Maximum="40" DefaultValue="10"
+                       ValueFormat="0' px'" Value="{Binding Corners}" />
+          <StackPanel Spacing="6">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.createCollage.background}" />
+            <t:SwatchPicker Hex="{Binding BackgroundColor, Mode=TwoWay}" />
+          </StackPanel>
+          <Grid ColumnDefinitions="112,*">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.createCollage.ratio}" VerticalAlignment="Center" />
+            <WrapPanel Grid.Column="1" ItemSpacing="6" LineSpacing="6">
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageAspect.Auto}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:CollageAspect.Auto}" Content="{DynamicResource panel.createCollage.ratio_auto}" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageAspect.Square}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:CollageAspect.Square}" Content="1:1" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageAspect.Standard}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:CollageAspect.Standard}" Content="4:3" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageAspect.Wide}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:CollageAspect.Wide}" Content="16:9" />
+              <Button Classes="pchip" Classes.primary="{Binding Aspect, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageAspect.Tall}}"
+                      Command="{Binding SetAspectCommand}" CommandParameter="{x:Static t:CollageAspect.Tall}" Content="9:16" />
+            </WrapPanel>
+          </Grid>
+          <Grid ColumnDefinitions="112,*">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.createCollage.size}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Classes="pchip" Classes.primary="{Binding Size, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageSize.Small}}"
+                      Command="{Binding SetSizeCommand}" CommandParameter="{x:Static t:CollageSize.Small}" Content="1080" />
+              <Button Classes="pchip" Classes.primary="{Binding Size, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageSize.Medium}}"
+                      Command="{Binding SetSizeCommand}" CommandParameter="{x:Static t:CollageSize.Medium}" Content="2048" />
+              <Button Classes="pchip" Classes.primary="{Binding Size, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static t:CollageSize.Large}}"
+                      Command="{Binding SetSizeCommand}" CommandParameter="{x:Static t:CollageSize.Large}" Content="3000" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

@@ -1,0 +1,76 @@
+<!-- Mandarina: the options of the video TRIM panel: the frame and the film strip with its two handles, frame by frame and play on
+     the left; the start and end times, "mark here" and the re-encode choice on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.TrimVideoView"
+             x:DataType="t:TrimVideoPanel">
+  <Grid ColumnDefinitions="*,310" ColumnSpacing="14">
+    <!-- the clip -->
+    <Border Classes="pcard">
+      <StackPanel Spacing="12">
+        <t:VideoStageView />
+
+        <!-- frame by frame · play -->
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" IsEnabled="{Binding IsReady}">
+          <Button Classes="pchip" Click="OnPreviousFrame" ToolTip.Tip="{DynamicResource panel.trimVideo.prev_frame}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Width="12" Height="12" Data="M18 5 L8 12 L18 19 Z M4.5 5 L7 5 L7 19 L4.5 19 Z" />
+              <TextBlock Text="{DynamicResource panel.trimVideo.frame}" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="1" Classes="pchip" Click="OnNextFrame" ToolTip.Tip="{DynamicResource panel.trimVideo.next_frame}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <TextBlock Text="{DynamicResource panel.trimVideo.frame}" />
+              <PathIcon Width="12" Height="12" Data="M6 5 L16 12 L6 19 Z M17 5 L19.5 5 L19.5 19 L17 19 Z" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="3" Classes="pchip primary" Click="OnPlay" IsVisible="{Binding CanPlay}" IsEnabled="{Binding !IsPlaying}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Width="11" Height="11" Data="M8 4.5 L19.5 12 L8 19.5 Z" />
+              <TextBlock Text="{DynamicResource panel.trimVideo.play}" Foreground="White" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="4" Classes="pchip" Click="OnStop" IsVisible="{Binding CanPlay}" IsEnabled="{Binding IsPlaying}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Width="11" Height="11" Data="M6 6 L18 6 L18 18 L6 18 Z" />
+              <TextBlock Text="{DynamicResource panel.trimVideo.stop}" />
+            </StackPanel>
+          </Button>
+        </Grid>
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.trimVideo.hint}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- the kept part -->
+    <Border Grid.Column="1" Classes="pcard">
+      <StackPanel Spacing="16" IsEnabled="{Binding IsReady}">
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.trimVideo.start}" />
+            <TextBox x:Name="StartBox" Text="{Binding StartText, Mode=OneWay}" LostFocus="OnStartCommit" KeyDown="OnTimeKeyDown" />
+            <Button Classes="pchip" Padding="6,6" Margin="0,4,0,0" HorizontalAlignment="Stretch" Click="OnMarkStart">
+              <TextBlock Text="{DynamicResource panel.trimVideo.mark_start}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" />
+            </Button>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.trimVideo.end}" />
+            <TextBox x:Name="EndBox" Text="{Binding EndText, Mode=OneWay}" LostFocus="OnEndCommit" KeyDown="OnTimeKeyDown" />
+            <Button Classes="pchip" Padding="6,6" Margin="0,4,0,0" HorizontalAlignment="Stretch" Click="OnMarkEnd">
+              <TextBlock Text="{DynamicResource panel.trimVideo.mark_end}" TextWrapping="Wrap" TextAlignment="Center" FontSize="12.5" />
+            </Button>
+          </StackPanel>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.trimVideo.kept}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Classes="pvalue" FontSize="18" Text="{Binding SelectionText}" />
+        </Grid>
+
+        <CheckBox IsChecked="{Binding NoRecode}" HorizontalAlignment="Stretch">
+          <TextBlock Text="{DynamicResource panel.videoStage.no_recode}" TextWrapping="Wrap" FontSize="12.5" />
+        </CheckBox>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

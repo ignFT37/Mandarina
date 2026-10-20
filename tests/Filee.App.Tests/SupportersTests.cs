@@ -13,7 +13,7 @@ public class SupportersTests
 
     private static string FindRepoRoot()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        var dir = new DirectoryInfo(TestPaths.Start);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Filee.slnx")))
             dir = dir.Parent;
         return dir?.FullName ?? throw new DirectoryNotFoundException("Filee.slnx");
@@ -41,7 +41,7 @@ public class SupportersTests
         var folder = Path.Combine(RepoRoot, "src", "Filee.App", "Assets", "Sponsors");
         var list = Supporters.Parse(File.ReadAllText(Path.Combine(folder, "sponsors.json")));
 
-        foreach (var readme in new[] { "README.md", "README.ko.md", "README.zh-CN.md" })
+        foreach (var readme in new[] { "README.md", "README.es.md" }) // Mandarina: its two READMEs (Filee has the Korean and Chinese ones)
         {
             var text = File.ReadAllText(Path.Combine(RepoRoot, readme));
             Assert.Contains("<!-- sponsors: src/Filee.App/Assets/Sponsors/sponsors.json -->", text);

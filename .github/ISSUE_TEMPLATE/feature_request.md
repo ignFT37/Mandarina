@@ -4,7 +4,7 @@ about: A new format, preset option or idea
 labels: enhancement
 ---
 
-**What would you like Filee to do?**
+**What would you like Mandarina to do?**
 
 **Why / when would you use it?**
 

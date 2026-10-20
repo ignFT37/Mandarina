@@ -94,6 +94,9 @@ public class PandocMarkupTests(EngineFixture fx) : IClassFixture<EngineFixture>
         Assert.Equal("adoc", FormatRegistry.FindByExtension("asciidoc")!.Id);
 
         Assert.SkipUnless(PandocConverter.Locate() is not null, "Pandoc not found (pwsh build/fetch-engines.ps1 -Only pandoc)");
+        // Mandarina: the routes below end in rhwp, so they only hold where it is found too (the CI fetches both). Where Pandoc is on
+        // the PC but rhwp is not, the planner rightly goes through slides and LibreOffice.
+        Assert.SkipUnless(fx.Converters.Any(c => c.Id == "rhwp" && fx.Catalog.StatusOf(c).IsAvailable), "rhwp not found (pwsh build/fetch-engines.ps1 -Only rhwp)");
         // Not through slides and LibreOffice's PPTX → PDF.
         Assert.Equal(["hwpx-writer", "rhwp"], planner.Plan("org", "pdf")!.Steps.Select(s => s.Converter.Id));
         Assert.Equal(["hwpx-writer", "rhwp"], planner.Plan("md", "pdf")!.Steps.Select(s => s.Converter.Id));

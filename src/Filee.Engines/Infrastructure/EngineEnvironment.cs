@@ -1,5 +1,6 @@
 // Shared context for engines: where Filee's own engine copies live and where engines keep their state.
-// Built-in engines never use software installed on the system (Microsoft Office, Hancom Office). The optional
+// Built-in engines never use software installed on the system (Microsoft Office, Hancom Office) -- except, in Mandarina,
+// the Microsoft Office engine (OfficeConverter), a deliberate exception: it is optional and has its own switch. The optional
 // engines (FFmpeg, calibre, Pandoc, Ghostscript, LibreOffice) are looked up in this order: a copy the user chose in
 // Settings → Engines (OwnCopies), Filee's own copy (installer or download, the tested version), then one already on
 // the PC (on the PATH or where its installer puts it), so nobody has to download a second FFmpeg they already have.
@@ -21,7 +22,7 @@ public sealed class EngineEnvironment(string dataDirectory)
     /// install root, so uninstalling removes it.
     /// </summary>
     public static string DownloadRoot { get; set; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Filee", "engines");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mandarina", "engines");
 
     /// <summary>
     /// Finds an engine directory (<c>engines/&lt;name&gt;</c>): next to the executable (bundled with the installer),
@@ -65,6 +66,13 @@ public sealed class EngineEnvironment(string dataDirectory)
 
     /// <summary>LibreOffice converts spreadsheets to PDF (Settings → Engines). Re-check after a change.</summary>
     public static bool LibreOfficeForSheets { get; set; }
+
+    /// <summary>
+    /// Mandarina: the Microsoft Office on the PC converts Word, PowerPoint and Excel files (Settings → Engines).
+    /// Off until the app or the command line turns it on from the settings, so a test run doesn't depend on whether
+    /// the machine has Office. Re-check the engines after a change.
+    /// </summary>
+    public static bool OfficeEnabled { get; set; }
 
     /// <summary>Programs required by each engine package on the current operating system.</summary>
     public static IReadOnlyDictionary<string, string[]> OwnCopyPrograms { get; } = Programs(OperatingSystem.IsWindows());
@@ -142,7 +150,12 @@ public sealed class EngineEnvironment(string dataDirectory)
         SystemCopyFolder(id) is { } folder ? Path.Combine(folder, ProgramName(program)) : null;
 
     /// <summary>Searches the PC again (Settings → Engines → Check again, settings changes).</summary>
-    public static void ForgetSystemCopies() => SystemCopies.Clear();
+    public static void ForgetSystemCopies()
+    {
+        SystemCopies.Clear();
+        // Mandarina: Office's self-test results (which of Word, Excel and PowerPoint could really convert) are forgotten too.
+        Office.OfficeSelfTest.Forget();
+    }
 
     private static string? FindOnSystem(string id) =>
         SystemFolders(id).Select(folder => FolderWithPrograms(id, folder)).FirstOrDefault(found => found is not null);

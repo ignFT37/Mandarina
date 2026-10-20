@@ -34,6 +34,8 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
         Scopes = Enum.GetValues<TriggerScope>()
             .Select(s => new Choice<TriggerScope>(s, loc[s == TriggerScope.FileManager ? $"triggers.scope.{s}{platform}" : $"triggers.scope.{s}"]))
             .ToList();
+        // Mandarina: which of the three wheels the gesture opens.
+        Wheels = Enum.GetValues<WheelMode>().Select(w => new Choice<WheelMode>(w, loc[$"triggers.wheel.{w}"])).ToList();
         RecordLabel = loc["triggers.record"];
         RecordingLabel = loc["triggers.recording"];
         SystemLabel = loc["triggers.threshold_system"];
@@ -49,6 +51,7 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
         DragThreshold = gesture.DragThreshold;
         HoldMilliseconds = gesture.HoldMilliseconds;
         Scope = Scopes.First(s => s.Value == gesture.Scope);
+        Wheel = Wheels.First(w => w.Value == gesture.Wheel);
         _loading = false;
     }
 
@@ -56,6 +59,7 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
     public IReadOnlyList<Choice<TriggerKind>> Kinds { get; }
     public IReadOnlyList<Choice<TriggerMouseButton>> Buttons { get; }
     public IReadOnlyList<Choice<TriggerScope>> Scopes { get; }
+    public IReadOnlyList<Choice<WheelMode>> Wheels { get; }
     public string RecordLabel { get; }
     public string RecordingLabel { get; }
     public string SystemLabel { get; }
@@ -75,6 +79,7 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ThresholdText))] private int _dragThreshold;
     [ObservableProperty] private int _holdMilliseconds;
     [ObservableProperty] private Choice<TriggerScope> _scope = null!;
+    [ObservableProperty] private Choice<WheelMode> _wheel = null!; // Mandarina: the wheel this gesture opens
     [ObservableProperty, NotifyPropertyChangedFor(nameof(KeyText))] private bool _isRecording;
 
     public bool UsesMouse => Kind.Value != TriggerKind.KeyChord;
@@ -83,7 +88,7 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
     public bool UsesHold => Kind.Value == TriggerKind.Hold;
     public string KeyText => IsRecording ? RecordingLabel : string.IsNullOrEmpty(Key) ? "—" : Key;
     public string ThresholdText => DragThreshold == 0 ? SystemLabel : $"{DragThreshold}px";
-    public string Summary => GestureText.Describe(_gesture);
+    public string Summary => $"{GestureText.Describe(_gesture)} → {Wheel.Label}"; // Mandarina: says which wheel too
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -101,6 +106,7 @@ public sealed partial class TriggerGestureViewModel : ObservableObject
         _gesture.DragThreshold = Math.Clamp(DragThreshold, 0, 200);
         _gesture.HoldMilliseconds = Math.Clamp(HoldMilliseconds, 150, 3000);
         _gesture.Scope = Scope.Value;
+        _gesture.Wheel = Wheel.Value; // Mandarina
         OnPropertyChanged(nameof(Summary));
         _save();
     }
@@ -162,16 +168,10 @@ public sealed partial class TriggersPageViewModel : ObservableObject, IDisposabl
 
     public ObservableCollection<TriggerGestureViewModel> Gestures { get; } = [];
 
-    public bool IsMacOS => _platform is MacOSPlatformServices;
+    public bool IsMacOS => PlatformLayers.IsMac(_platform);
     public bool CanRetryHook => _triggers is not null && (_platform?.SupportsGlobalPointerGestures == true || IsMacOS);
     public string? IntegrationError => _accessibilityError ?? _integration?.Error;
-    public string? PlatformNotice => _platform switch
-    {
-        MacOSPlatformServices => _loc["triggers.macos_permissions"],
-        LinuxPlatformServices when OperatingSystem.IsLinux() && LinuxPlatformServices.IsWaylandSession => _loc["triggers.linux_wayland"],
-        LinuxPlatformServices => _loc["triggers.linux_x11"],
-        _ => null,
-    };
+    public string? PlatformNotice => PlatformLayers.ShortcutsNotice(_platform, _loc);
     public string? HookStatus => _triggers?.Error is { } error ? _loc.Format("triggers.hook_failed", error)
         : _triggers is null ? null : _loc[_triggers.IsRunning ? "triggers.hook_running" : "triggers.hook_stopped"];
 
@@ -184,8 +184,7 @@ public sealed partial class TriggersPageViewModel : ObservableObject, IDisposabl
         try
         {
             _accessibilityError = null;
-            if (OperatingSystem.IsMacOS() && _platform is MacOSPlatformServices mac)
-                mac.OpenAccessibilitySettings();
+            PlatformLayers.OpenMacAccessibilitySettings(_platform);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
         {

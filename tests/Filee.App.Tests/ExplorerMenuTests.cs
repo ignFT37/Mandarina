@@ -27,7 +27,7 @@ public class ExplorerMenuTests
     {
         get
         {
-            var dir = AppContext.BaseDirectory;
+            var dir = TestPaths.Start;
             while (!File.Exists(Path.Combine(dir, "Filee.slnx")))
                 dir = Path.GetDirectoryName(dir) ?? throw new InvalidOperationException("Repository root not found.");
             return dir;

@@ -14,8 +14,9 @@ public static class BuiltInData
     /// <summary>Creates the default preset list.</summary>
     public static List<Preset> CreatePresets() =>
     [
-        new() { Id = "to-png", Name = "PNG", TargetFormat = "png" },
-        new() { Id = "to-jpg", Name = "JPG", TargetFormat = "jpg", Image = { Quality = 90 } },
+        // Mandarina: PDF pages become images at 300 DPI.
+        new() { Id = "to-png", Name = "PNG", TargetFormat = "png", Pdf = { RenderDpi = 300 } },
+        new() { Id = "to-jpg", Name = "JPG", TargetFormat = "jpg", Image = { Quality = 90 }, Pdf = { RenderDpi = 300 } },
         new()
         {
             Id = "jpg-70", Name = "JPG 70%", TargetFormat = "jpg",
@@ -71,7 +72,7 @@ public static class BuiltInData
         new() { Id = "to-odt", Name = "ODT", TargetFormat = "odt" },
         new() { Id = "to-rtf", Name = "RTF", TargetFormat = "rtf" },
         new() { Id = "to-txt", Name = "TXT", TargetFormat = "txt" },
-        new() { Id = "to-md", Name = "Markdown", TargetFormat = "md" },
+        new() { Id = "to-md", Name = "MD", TargetFormat = "md" },
         new() { Id = "to-html", Name = "HTML", TargetFormat = "html" },
         .. SpreadsheetPresets(),
         .. CatalogPresets(),
@@ -79,6 +80,16 @@ public static class BuiltInData
         .. CodecAndSubtitlePresets(),
         .. ModelPresets(),
         .. TracePresets(),
+        .. MandarinaPresets(),
+    ];
+
+    /// <summary>Mandarina: targets Mandarina adds that Filee had no preset for.</summary>
+    public static List<Preset> MandarinaPresets() =>
+    [
+        new() { Id = "to-aiff", Name = "AIFF", TargetFormat = "aiff" },
+        new() { Id = "to-wma", Name = "WMA", TargetFormat = "wma" },
+        new() { Id = "to-wmv", Name = "WMV", TargetFormat = "wmv" },
+        new() { Id = "to-tsv", Name = "TSV", TargetFormat = "tsv" },
     ];
 
     /// <summary>Raster → SVG tracing, in colour and as black line art (added in settings schema 16).</summary>
@@ -113,7 +124,7 @@ public static class BuiltInData
         // Subtitles; on the video donut, SRT takes the first text subtitle track out of the video.
         new() { Id = "extract-subtitles", NameKey = "preset.extract_subtitles", TargetFormat = "srt" },
         new() { Id = "to-srt", Name = "SRT", TargetFormat = "srt" },
-        new() { Id = "to-vtt", Name = "WebVTT", TargetFormat = "vtt" },
+        new() { Id = "to-vtt", Name = "VTT", TargetFormat = "vtt" },
         new() { Id = "to-ass", Name = "ASS", TargetFormat = "ass" },
         new() { Id = "to-smi", Name = "SAMI", TargetFormat = "smi" },
         new() { Id = "to-lrc", Name = "LRC", TargetFormat = "lrc" },
@@ -200,7 +211,7 @@ public static class BuiltInData
         // Archives
         new() { Id = "to-zip", Name = "ZIP", TargetFormat = "zip" },
         new() { Id = "to-7z", Name = "7Z", TargetFormat = "7z" },
-        new() { Id = "to-tgz", Name = "TAR.GZ", TargetFormat = "tgz" },
+        new() { Id = "to-tgz", Name = "GZIP", TargetFormat = "tgz" },
         new() { Id = "to-tar", Name = "TAR", TargetFormat = "tar" },
         new() { Id = "extract", NameKey = "preset.extract", TargetFormat = FormatRegistry.Folder },
         new()
@@ -276,8 +287,44 @@ public static class BuiltInData
         new() { Id = "to-vcf", Name = "vCard", TargetFormat = "vcf" },
     ];
 
-    /// <summary>Creates the default toolbar profiles.</summary>
-    public static List<ToolbarProfile> CreateProfiles() =>
+    /// <summary>
+    /// Creates the default toolbar profiles: Filee's, with Mandarina's extra targets on the donuts that have them.
+    /// A file's own format is left out when the donut opens. Filee's own profiles stay for migrations.
+    /// </summary>
+    public static List<ToolbarProfile> CreateProfiles()
+    {
+        var profiles = FileeProfiles();
+        void Set(string id, params string[] presets)
+        {
+            if (profiles.Find(p => p.Id == id) is { } profile)
+                profile.PresetIds = [.. presets];
+        }
+        Set("images", "to-jpg", "to-png", "to-webp", "to-heic", "to-tiff", "to-avif", "to-bmp", "to-pdf");
+        Set("vector", "to-jpg", "to-png", "to-webp", "to-heic", "to-tiff", "to-avif", "to-bmp", "to-pdf");
+        Set("pdf", "to-docx", "to-pptx", "to-xlsx", "to-jpg", "to-png", "to-epub", "to-txt", "to-md");
+        Set("office", "to-docx", "to-pdf", "to-txt", "to-md", "to-html", "to-epub", "to-png", "to-jpg");
+        Set("text", "to-docx", "to-pdf", "to-txt", "to-md", "to-html", "to-epub", "to-jpg", "to-png");
+        Set("ebooks", "to-pdf", "to-docx", "to-txt", "to-md", "to-html");
+        Set("presentations", "to-pdf", "to-jpg", "to-png");
+        Set("spreadsheets", "to-xlsx", "to-ods", "to-csv", "to-tsv", "to-pdf");
+        Set("video", "to-mp4", "to-mov", "to-mkv", "to-webm", "to-avi", "to-wmv", "to-gif", "to-mp3");
+        Set("audio", "to-mp3", "to-m4a", "to-wav", "to-flac", "to-ogg", "to-opus", "to-aiff", "to-wma");
+        Set("subtitles", "to-srt", "to-vtt", "to-txt");
+        Set("archives", "to-zip", "to-tar", "to-tgz");
+        // Mandarina treats a GIF as a video: its own donut, right after "images", which no longer claims .gif.
+        var images = profiles.FindIndex(p => p.Id == "images");
+        profiles[images].Extensions.Remove("gif");
+        profiles.Insert(images + 1, new ToolbarProfile
+        {
+            Id = "gif", Name = "GIF",
+            Extensions = ["gif"],
+            PresetIds = ["to-mp4", "to-mov", "to-mkv", "to-webm", "to-avi", "to-wmv"],
+        });
+        return profiles;
+    }
+
+    /// <summary>Filee's default toolbar profiles.</summary>
+    public static List<ToolbarProfile> FileeProfiles() =>
     [
         new()
         {

@@ -42,7 +42,7 @@ public sealed class MacOSIntegrationTests
 
     private static string RepositoryRoot()
     {
-        var folder = new DirectoryInfo(AppContext.BaseDirectory);
+        var folder = new DirectoryInfo(TestPaths.Start);
         while (folder is not null && !File.Exists(Path.Combine(folder.FullName, "Filee.slnx")))
             folder = folder.Parent;
         return folder?.FullName ?? throw new DirectoryNotFoundException("Filee.slnx not found above the test output.");

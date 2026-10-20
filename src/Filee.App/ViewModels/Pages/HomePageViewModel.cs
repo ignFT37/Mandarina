@@ -117,8 +117,7 @@ public sealed partial class HomePageViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenAccessibility()
     {
-        if (OperatingSystem.IsMacOS() && _platform is Filee.Platform.MacOS.MacOSPlatformServices mac)
-            mac.OpenAccessibilitySettings();
+        PlatformLayers.OpenMacAccessibilitySettings(_platform);
     }
 
     public string DropHint { get; }

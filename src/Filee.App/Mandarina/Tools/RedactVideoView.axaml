@@ -1,0 +1,60 @@
+<!-- Mandarina: the options of the video REDACT panel: a frame with its areas and, under it, the frame slider and the times of the selected area; the detection buttons and the effect on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.RedactVideoView"
+             x:DataType="t:RedactVideoPanel">
+  <Grid ColumnDefinitions="*,280" ColumnSpacing="14" VerticalAlignment="Top">
+    <!-- the frame -->
+    <Border Classes="pcard" VerticalAlignment="Top">
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding InfoText}" Margin="12,0,0,0" />
+        </Grid>
+        <Border Classes="pwell" Height="300">
+          <Panel>
+            <t:RegionEditor Source="{Binding Preview}" PixelWidth="{Binding SourceWidth}" PixelHeight="{Binding SourceHeight}"
+                            Regions="{Binding Regions}" SelectedRegion="{Binding SelectedRegion, Mode=TwoWay}"
+                            CoverBrush="{Binding CoverBrush}" CurrentTime="{Binding FramePosition}" />
+            <TextBlock Text="{DynamicResource panel.redactVideo.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Classes="plabel" IsVisible="{Binding IsLoading}" />
+            <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                       Margin="24" Classes="plabel" IsVisible="{Binding HasLoadError}" />
+          </Panel>
+        </Border>
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.redactVideo.hint}" TextWrapping="Wrap" />
+
+        <!-- which frame -->
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.redactVideo.frame}" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Duration}" Value="{Binding FramePosition, Mode=TwoWay}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="2" Classes="pvalue" Text="{Binding FrameText}" MinWidth="62" TextAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- when the selected area is covered -->
+        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="12" IsVisible="{Binding HasSelection}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.redactVideo.from}" />
+            <TextBox x:Name="FromBox" Text="{Binding SelectedStartText, Mode=OneWay}" IsEnabled="{Binding !SelectedWholeVideo}"
+                     LostFocus="OnFromCommit" KeyDown="OnTimeKeyDown" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.redactVideo.to}" />
+            <TextBox x:Name="ToBox" Text="{Binding SelectedEndText, Mode=OneWay}" IsEnabled="{Binding !SelectedWholeVideo}"
+                     LostFocus="OnToCommit" KeyDown="OnTimeKeyDown" />
+          </StackPanel>
+          <CheckBox Grid.Column="2" VerticalAlignment="Bottom" IsChecked="{Binding SelectedWholeVideo, Mode=TwoWay}"
+                    Content="{DynamicResource panel.redactVideo.whole}" />
+        </Grid>
+        <TextBlock Classes="plabel" Text="{Binding FrameError}" TextWrapping="Wrap" Foreground="#C0392B"
+                   IsVisible="{Binding FrameError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+
+    <!-- detection · effect -->
+    <StackPanel Grid.Column="1" Spacing="12" VerticalAlignment="Top">
+      <t:RedactOptionsView />
+    </StackPanel>
+  </Grid>
+</UserControl>

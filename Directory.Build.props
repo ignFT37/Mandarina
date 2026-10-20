@@ -15,12 +15,25 @@
     <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
 
     <Version>1.11.0</Version>
-    <Product>Filee</Product>
-    <Authors>Filee contributors</Authors>
-    <Copyright>Copyright (c) Filee contributors</Copyright>
+    <Product>Mandarina</Product>
+    <Authors>Ignacio Insua; Filee contributors</Authors>
+    <Copyright>Copyright (c) 2026 Ignacio Insua (Mandarina) and Filee contributors</Copyright>
 
-    <!-- Single source of truth for the GitHub repository (used by the updater and the About page). -->
-    <FileeRepositoryUrl>https://github.com/KnifeLemon/Filee</FileeRepositoryUrl>
+    <!-- Single source of truth for the GitHub repository (used by the updater and the About page). Mandarina: its own repository, not Filee's. -->
+    <FileeRepositoryUrl>https://github.com/ignFT37/Mandarina</FileeRepositoryUrl>
     <RepositoryUrl>$(FileeRepositoryUrl)</RepositoryUrl>
   </PropertyGroup>
+
+  <!-- Mandarina: bin/obj go to %USERPROFILE%\.mandarina\build instead of the checkout, so a copy inside a synced folder
+       (OneDrive, Dropbox...) doesn't upload build output (not under AppData: packaged apps see a private copy of it).
+       Set MandarinaBuildRoot (e.g. on the command line, with a trailing slash) to build somewhere else. -->
+  <PropertyGroup>
+    <MandarinaBuildRoot Condition="'$(MandarinaBuildRoot)' == ''">$(USERPROFILE)\.mandarina\build\</MandarinaBuildRoot>
+    <BaseOutputPath>$(MandarinaBuildRoot)$(MSBuildProjectName)\bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MandarinaBuildRoot)$(MSBuildProjectName)\obj\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <!-- Tests that read repository files look for Filee.slnx above their output; tell them where the checkout is. -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <AssemblyMetadata Include="MandarinaRepoRoot" Value="$(MSBuildThisFileDirectory)" />
+  </ItemGroup>
 </Project>

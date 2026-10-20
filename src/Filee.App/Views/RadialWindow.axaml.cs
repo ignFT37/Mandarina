@@ -89,9 +89,26 @@ public partial class RadialWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>Mandarina: a modifier key went down while the wheel has the focus (click mode): maybe switch wheels.</summary>
+    public event Action<Core.Settings.ModifierKeys>? WheelKeyPressed;
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        Core.Settings.ModifierKeys? modifier = e.Key switch
+        {
+            Key.LeftShift or Key.RightShift => Core.Settings.ModifierKeys.Shift,
+            Key.LeftCtrl or Key.RightCtrl => Core.Settings.ModifierKeys.Ctrl,
+            Key.LeftAlt or Key.RightAlt => Core.Settings.ModifierKeys.Alt,
+            Key.LWin or Key.RWin => Core.Settings.ModifierKeys.Meta,
+            _ => null,
+        };
+        if (modifier is { } key)
+        {
+            WheelKeyPressed?.Invoke(key);
+            e.Handled = true;
+            return;
+        }
         if (Donut.HandleKey(e.Key, e.KeyModifiers))
         {
             e.Handled = true;
@@ -114,11 +131,14 @@ public partial class RadialWindow : Window
             Donut.CollapseGroup();
     }
 
-    /// <summary>Local file paths in the drag data (folders and virtual items are ignored).</summary>
+    /// <summary>
+    /// Local paths in the drag data: files and (for Mandarina's actions wheel) folders. Virtual items are ignored; the
+    /// conversion and tools wheels skip the folders themselves.
+    /// </summary>
     private static IReadOnlyList<string> LocalFiles(DragEventArgs e) =>
         (e.DataTransfer.TryGetFiles() ?? [])
             .Select(item => item.TryGetLocalPath())
             .OfType<string>()
-            .Where(File.Exists)
+            .Where(path => File.Exists(path) || Directory.Exists(path))
             .ToList();
 }

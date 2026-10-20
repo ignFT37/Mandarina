@@ -45,7 +45,8 @@ public class DonutLabelPlacementTests
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         }
 
-        var (pixels, width, height) = Read(window.CaptureRenderedFrame()!);
+        using var frame = window.CaptureRenderedFrame()!; // Mandarina: disposed, not left to the finalizer
+        var (pixels, width, height) = Read(frame);
         var origin = donut.TranslatePoint(new Point(0, 0), window)!.Value;
         var center = new Point(origin.X + donut.Bounds.Width / 2, origin.Y + donut.Bounds.Height / 2);
         var labelRadius = (OuterRadius + OuterRadius * HoleRatio) / 2;

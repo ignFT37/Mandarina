@@ -9,7 +9,7 @@
         xmlns:vm="using:Filee.App.ViewModels"
         x:Class="Filee.App.Views.RadialWindow"
         x:DataType="vm:RadialViewModel"
-        Title="Filee"
+        Title="Mandarina"
         WindowDecorations="None"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
@@ -27,6 +27,8 @@
                  OuterRadius="{Binding OuterRadius}"
                  HoleRatio="{Binding HoleRatio}"
                  SliceOpacity="{Binding SliceOpacity}"
-                 ReserveSubRing="{Binding ReserveSubRing}" />
+                 ReserveSubRing="{Binding ReserveSubRing}"
+                 Glass="True"
+                 Backdrop="{Binding Backdrop}" />
   </Panel>
 </Window>

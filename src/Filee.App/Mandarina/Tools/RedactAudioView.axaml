@@ -1,0 +1,104 @@
+<!-- Mandarina: the options of the BLEEP panel: the waveform with its two handles and the stretches already marked (red), the buttons that
+     add the handles' stretch or play it, the list of marked stretches and the loudness of the tone. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:p="using:Filee.App.Mandarina.Panels"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.RedactAudioView"
+             x:DataType="t:RedactAudioPanel">
+  <UserControl.Styles>
+    <!-- the small round ✕ of a marked stretch -->
+    <Style Selector="Button.bleepx">
+      <Setter Property="Foreground" Value="{DynamicResource PanelMuted}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border x:Name="Bg" Width="24" Height="24" CornerRadius="12" Background="Transparent">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Content="{TemplateBinding Content}"
+                              TextElement.Foreground="{TemplateBinding Foreground}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Button.bleepx:pointerover /template/ Border#Bg">
+      <Setter Property="Background" Value="#E3DAE6" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="pcard" VerticalAlignment="Top">
+    <StackPanel Spacing="12">
+      <!-- file name · length -->
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="pvalue" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="12,0,0,0">
+          <TextBlock Classes="plabel" Text="{DynamicResource panel.duration}" />
+          <TextBlock Classes="plabel" Text="{Binding DurationText}" />
+        </StackPanel>
+      </Grid>
+
+      <!-- the waveform: the handles hold the stretch to add, the red bands are what is marked already -->
+      <Border Classes="pwell" Height="132">
+        <Panel>
+          <p:WaveformView Peaks="{Binding Peaks}" Duration="{Binding Duration}" Start="{Binding Start, Mode=TwoWay}"
+                          End="{Binding End, Mode=TwoWay}" Position="{Binding Position, Mode=TwoWay}" Marks="{Binding Marks}" Margin="4,10"
+                          IsVisible="{Binding !HasLoadError}" />
+          <TextBlock Text="{DynamicResource panel.redactAudio.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Classes="plabel" IsVisible="{Binding IsLoading}" />
+          <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                     Margin="24" Classes="plabel" IsVisible="{Binding HasLoadError}" />
+        </Panel>
+      </Border>
+      <!-- what can be done once the file is read -->
+      <StackPanel Spacing="12" IsEnabled="{Binding !HasLoadError}">
+        <TextBlock Classes="plabel" Text="{DynamicResource panel.redactAudio.hint}" TextWrapping="Wrap" />
+
+        <!-- the handles' stretch · add · play -->
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <StackPanel VerticalAlignment="Center" Spacing="2">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.redactAudio.selection}" />
+            <TextBlock Classes="pvalue" Text="{Binding SelectionText}" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="pchip primary" Click="OnAdd" IsEnabled="{Binding CanAdd}"
+                  Content="{DynamicResource panel.redactAudio.add}" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="pchip" Click="OnPlay" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Width="11" Height="11" Data="M8 4.5 L19.5 12 L8 19.5 Z" IsVisible="{Binding !IsPlaying}" />
+              <PathIcon Width="11" Height="11" Data="M6 6 L18 6 L18 18 L6 18 Z" IsVisible="{Binding IsPlaying}" />
+              <TextBlock Text="{DynamicResource panel.redactAudio.play}" IsVisible="{Binding !IsPlaying}" />
+              <TextBlock Text="{DynamicResource panel.redactAudio.stop}" IsVisible="{Binding IsPlaying}" />
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <!-- what is marked -->
+        <StackPanel Spacing="6">
+          <TextBlock Classes="plabel" Text="{Binding RangesTitle}" />
+          <!-- always as tall as three rows, so the slider below does not move as stretches are added -->
+          <Border Classes="pwell" Height="108">
+            <Panel>
+              <TextBlock Classes="plabel" Text="{DynamicResource panel.redactAudio.empty}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         TextWrapping="Wrap" Margin="16,0" IsVisible="{Binding !HasRanges}" />
+              <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasRanges}">
+                <ItemsControl ItemsSource="{Binding Ranges}" Margin="14,4,8,4">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="t:BleepRange">
+                      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Height="32">
+                        <TextBlock Classes="pvalue" FontSize="12.5" Text="{Binding RangeText}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding LengthText}" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="bleepx" Click="OnRemove" ToolTip.Tip="{DynamicResource panel.redactAudio.remove}">
+                          <PathIcon Width="9" Height="9" Data="{StaticResource Icon.Close}" />
+                        </Button>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Panel>
+          </Border>
+        </StackPanel>
+
+        <!-- the tone -->
+        <p:SliderRow Label="{DynamicResource panel.redactAudio.volume}" Minimum="0" Maximum="100" DefaultValue="35"
+                     ValueFormat="0'%'" Value="{Binding Volume}" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

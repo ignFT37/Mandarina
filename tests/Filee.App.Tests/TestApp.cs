@@ -45,10 +45,73 @@ internal static class TestServices
             _initializedFor = app;
         }
 
+        // Mandarina: the main windows of the tests before are closed for good (below) and only what is not in place is applied.
+        if (!_watchingWindows)
+        {
+            Avalonia.Controls.Window.WindowOpenedEvent.AddClassHandler<Filee.App.Views.MainWindow>((window, _) =>
+            {
+                if (!MainWindows.Contains(window))
+                    MainWindows.Add(window);
+            });
+            _watchingWindows = true;
+        }
+
         var store = AppHost.Get<UserDataStore>();
         store.Settings.Language = language;
-        AppHost.Get<LocalizationService>().SetLanguage(language);
-        AppHost.Get<ThemeService>().Apply(store.Settings.Theme, language);
+        var localization = AppHost.Get<LocalizationService>();
+        var theme = store.Settings.Theme;
+        var changed = localization.NeedsUpdate(language) || !ThemeIsApplied(app, theme);
+        if (changed || MainWindows.Count >= CleanUpAfter)
+            CloseMainWindows();
+        if (!changed)
+            return;
+
+        localization.SetLanguage(language);
+        AppHost.Get<ThemeService>().Apply(theme, language);
+    }
+
+    /// <summary>The main windows the tests opened and "closed" (which only hides them), until they are closed for good.</summary>
+    private static readonly List<Filee.App.Views.MainWindow> MainWindows = [];
+
+    private const int CleanUpAfter = 3;
+    private static bool _watchingWindows;
+
+    /// <summary>
+    /// Closes for good the main windows the tests before left hidden, and collects them. Closing a MainWindow only hides it (the
+    /// app lives in the tray and reuses it), so every test that made one left it behind: registered with the renderer and subscribed
+    /// to every resource change, with its pages, view models and pictures, for the rest of the run. Each of the ~1,200 tests
+    /// piled up more and every <c>SetLanguage</c> (a thousand resources, each one told to every control alive) paid over a second
+    /// per window: RenderTests alone took over ten minutes, the whole suite over two hours and 3.8 GB.
+    /// </summary>
+    private static void CloseMainWindows()
+    {
+        var keep = AppHost.Get<WindowService>().Main;
+        foreach (var window in MainWindows.ToArray())
+        {
+            if (window.IsVisible || ReferenceEquals(window, keep))
+                continue;
+            window.CloseForGood();
+            MainWindows.Remove(window);
+        }
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+    }
+
+    /// <summary>The application already shows <paramref name="theme"/> (a test that left another one behind is put right).</summary>
+    private static bool ThemeIsApplied(Application app, ThemeSettings theme)
+    {
+        var variant = theme.Mode switch
+        {
+            ThemeMode.Light => Avalonia.Styling.ThemeVariant.Light,
+            ThemeMode.Dark => Avalonia.Styling.ThemeVariant.Dark,
+            _ => Avalonia.Styling.ThemeVariant.Default,
+        };
+        return app.RequestedThemeVariant == variant
+               && Avalonia.Media.Color.TryParse(theme.Accent, out var accent)
+               && app.Resources.TryGetResource("AccentColor", null, out var applied) && applied is Avalonia.Media.Color current && current == accent
+               && app.Resources.TryGetResource("SoftRadius", null, out var radius) && radius is Avalonia.CornerRadius corner
+               && Math.Abs(corner.TopLeft - Math.Clamp(theme.CornerRadius, 0, 28)) < 0.01;
     }
 
     /// <summary>Where rendered screenshots go: tests/Filee.App.Tests/bin/.../screenshots.</summary>

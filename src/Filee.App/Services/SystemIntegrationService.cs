@@ -32,16 +32,16 @@ public sealed class SystemIntegrationService(IPlatformServices platform, ILocali
             _menu = menu;
             _shortcutApplied = false;
         }
-        if (OperatingSystem.IsLinux() && platform is LinuxPlatformServices linux)
+        if (PlatformLayers.IsLinux(platform))
         {
             ApplyOne(() =>
             {
                 var shortcut = settings.ContextMenuEnabled && !settings.Paused
                     ? settings.Triggers.FirstOrDefault(g => g.Enabled && g.Kind == TriggerKind.KeyChord) : null;
-                var accelerator = shortcut is null ? null : LinuxPlatformServices.ToThunarAccelerator(shortcut);
+                var accelerator = PlatformLayers.ThunarAccelerator(shortcut);
                 if (!_shortcutApplied || _shortcut != accelerator)
                 {
-                    linux.SetThunarShortcut(accelerator);
+                    PlatformLayers.SetThunarShortcut(platform, accelerator);
                     _shortcut = accelerator;
                     _shortcutApplied = true;
                 }

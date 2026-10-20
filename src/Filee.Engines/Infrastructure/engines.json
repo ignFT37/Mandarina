@@ -64,6 +64,20 @@
       "size": 99899672,
       "kind": "zip"
     },
+    "whisper": {
+      "version": "large-v3-turbo-q5_0",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin",
+      "sha256": "394221709CD5AD1F40C46E6031CA61BCE88931E6E088C188294C6D5A55FFA7E2",
+      "size": 574041195,
+      "kind": "file"
+    },
+    "whisper-small": {
+      "version": "small-q8_0",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q8_0.bin",
+      "sha256": "49C8FB02B65E6049D5FA6C04F81F53B867B5EC9540406812C643F177317F779F",
+      "size": 264464607,
+      "kind": "file"
+    },
     "calibre": {
       "version": "9.15.0",
       "url": "https://download.calibre-ebook.com/9.15.0/calibre-64bit-9.15.0.msi",

@@ -1,6 +1,9 @@
-# Contributing to Filee
+# Contributing to Mandarina
 
-Thanks for helping! Filee is built to be easy to extend: most contributions touch one file plus a test.
+Thanks for helping! Mandarina is a fork of [Filee](https://github.com/KnifeLemon/Filee) and keeps its structure, so most
+contributions touch one file plus a test. This guide is Filee's, adapted. What Mandarina adds (the wheels, the tool panels,
+Whisper transcription, the Office engine) is described in [CLAUDE.md](CLAUDE.md) and [docs/mandarina/](docs/mandarina/); changes to
+Filee's own engines and converters are best sent upstream as well. Every change inside a Filee file carries a `Mandarina:` comment.
 
 ## Setup
 
@@ -12,7 +15,8 @@ Thanks for helping! Filee is built to be easy to extend: most contributions touc
    H2Orestart and Java (~420 MB), which only older formats such as DOC, XLS and PPT need. Engines in the
    repository's `engines/` folder are picked up by debug builds; users download the large ones from the app.
    Filee can also discover supported engines on `PATH` and in their standard installation folders. Settings >
-   Engines lets you choose a specific copy. Microsoft Office is not used.
+   Engines lets you choose a specific copy. Filee never uses Microsoft Office; Mandarina's optional Office engine does, through
+   COM, and only when the user has Office installed and the switch in Settings > Engines is on.
 4. `dotnet run --project src/Filee.App`, `dotnet test`.
 
 Any IDE works (Visual Studio 2022+, Rider, VS Code with C# Dev Kit).
@@ -48,13 +52,10 @@ and notarization. `-SigningIdentity` can supply a signing identity, but does not
   The macOS LibreOffice package does not include H2Orestart; native rhwp/Unhwp provide the supported HWP routes.
   Use Settings > Engines to inspect actual availability before comparing formats.
 
-The reusable `portable.yml` workflow builds and tests all four targets. Native platform tests skip on other OSes.
-Before calling a port ready, verify the installed package, CLI conversion, Finder/Thunar selection with Unicode
-and spaced paths, drag and keyboard gestures, permissions denied/granted, Retina/scaling, tray, login startup,
-engine downloads, watch folders, and uninstall. CI GUI startup alone does not validate these interactions.
-
-The website lives in the adjacent `../filee-web` repository. Its downloads must match real release assets and
-keep development status visible until native validation is complete.
+Filee's `portable.yml` workflow (not part of Mandarina) built and tested all four targets; native platform tests skip on other
+OSes. Mandarina's wheels, tool panels and Office engine are Windows only and have only been tried there. Before calling a port
+ready, verify the installed package, CLI conversion, Finder/Thunar selection with Unicode and spaced paths, drag and keyboard
+gestures, permissions denied/granted, Retina/scaling, tray, login startup, engine downloads, watch folders, and uninstall.
 
 ## Where things live
 
@@ -72,7 +73,8 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first. In short:
   - Every file starts with a short comment saying what it is for.
   - Public types and members get `///` XML docs.
   - Explain *why* for anything non-obvious (workarounds, engine quirks) — see `LibreOfficeConverter.cs` for the tone.
-- Keep UI strings out of code: add a key to all three `i18n/*.json` files (a test checks they match).
+- Keep UI strings out of code: add a key to every `i18n/*.json` file (en, es, ko, zh-CN; a test checks they match). Write your
+  own wording: do not copy text from other products.
 - Prefer small, focused pull requests.
 
 ## Tests
@@ -91,15 +93,11 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first. In short:
 2. `dotnet format && dotnet test`.
 3. Open a PR and fill in the template. Screenshots for UI changes, please.
 
-## Releasing (maintainers)
+## Building and installing Mandarina (maintainers)
 
-Bump `<Version>` in `Directory.Build.props`, merge, then push a tag `vX.Y.Z`. `.github/workflows/release.yml` runs the
-tests and `build/build-installer.ps1 -Portable`: it publishes the app (`-p:FileeRelease=true`, which lets it register
-Explorer and startup entries), adds the Explorer menu extension and the bundled rhwp and 7-Zip, compiles
-`installer/Filee.iss` with a pinned, portable Inno Setup, and uploads `Filee-X.Y.Z-win-Setup.exe`, the portable zip and
-their SHA-256 sums with release notes generated from the merged pull requests.
-
-To try the installer locally run `pwsh build/build-installer.ps1` (output in `Releases/`). Setup needs administrator
-rights; `pwsh build/build-installer.ps1 -CheckOnly` only compiles the script. The installer's engine page and some of
-its texts are generated from `EngineDownloads` and the app's translations (`build/tools/make-installer-engines.cs`);
-its own texts are in the `[CustomMessages]` section of `installer/Filee.iss` (English, Korean, Simplified Chinese).
+Mandarina has no installer or release workflow yet: it is built from source. `tools/mandarina/publish-mandarina.ps1` publishes
+the app and the `mandarina` command into `%USERPROFILE%\.mandarina\publish\win-x64` (with the bundled rhwp and 7-Zip), and
+`tools/mandarina/install-mandarina.ps1` installs that build for the current user (Start menu entry, engines it finds in
+`%USERPROFILE%\.mandarina\engines`). Filee's own installer (`installer/Filee.iss`, `build/build-installer.ps1`) and its
+`Filee-<version>-win-Setup.exe` packaging are still in the tree but are not used by Mandarina; its engine page and some of its
+texts are generated from `EngineDownloads` and the app's translations (`build/tools/make-installer-engines.cs`).

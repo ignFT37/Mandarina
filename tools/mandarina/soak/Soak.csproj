@@ -1,0 +1,20 @@
+<!--
+  Mandarina: a soak harness. It opens and closes tool panels (or pieces of them) in a real Avalonia/Win32 process, off
+  screen and without taking focus, and prints how the process's memory moves: the tool that finds what a closed panel keeps.
+  Not part of Filee.slnx and never shipped. Build: dotnet build tools/mandarina/soak/Soak.csproj
+  Run:   %USERPROFILE%\.mandarina\build\Soak\bin\Debug\net10.0\Soak.exe (options at the top of Program.cs)
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Soak</RootNamespace>
+    <ApplicationManifest>..\..\..\src\Filee.App\app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Filee.App\Filee.App.csproj" />
+  </ItemGroup>
+</Project>

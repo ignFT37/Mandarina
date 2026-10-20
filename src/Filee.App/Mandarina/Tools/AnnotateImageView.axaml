@@ -1,0 +1,179 @@
+<!-- Mandarina: the options of the ANNOTATE panel: tools and style on the left, the photo with its marks on the right. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="using:Filee.App.Mandarina.Tools"
+             x:Class="Filee.App.Mandarina.Tools.AnnotateImageView"
+             x:DataType="t:AnnotateImagePanel">
+  <UserControl.Resources>
+    <x:Double x:Key="SliderHorizontalHeight">22</x:Double>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <!-- A tool in the list: the shared pill, full width -->
+    <Style Selector="ToggleButton.tool">
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <!-- A colour: a round dot, ringed in orange when it is the one in use -->
+    <Style Selector="ToggleButton.swatch">
+      <Setter Property="Width" Value="26" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="Margin" Value="0,0,8,4" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Panel>
+            <Ellipse x:Name="Ring" Fill="Transparent" Stroke="#FF5200" StrokeThickness="2.5" IsVisible="False" />
+            <Ellipse Margin="3.5" Fill="{TemplateBinding Background}" Stroke="#40000000" StrokeThickness="1" />
+          </Panel>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ToggleButton.swatch:checked /template/ Ellipse#Ring">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="ToggleButton.swatch:pointerover:not(:checked) /template/ Ellipse#Ring">
+      <Setter Property="IsVisible" Value="True" />
+      <Setter Property="Stroke" Value="#55000000" />
+    </Style>
+    <!-- Drawn icons: the stroke follows the button's text colour -->
+    <Style Selector="Path.picon">
+      <Setter Property="StrokeThickness" Value="2.2" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="172,12,*">
+    <!-- tools · style -->
+    <StackPanel Spacing="10" VerticalAlignment="Top">
+      <Border Classes="pcard" Padding="12,10">
+        <StackPanel x:Name="ToolList" Spacing="3">
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Select}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="M6,3 L6,18.5 L9.8,15.2 L12.4,21 L14.9,19.9 L12.3,14.2 L17.3,14 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.select}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Arrow}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="M3,10.2 H14 V5.8 L21,12 L14,18.2 V13.8 H3 Z" RenderTransform="rotate(-45deg)" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.arrow}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Line}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="M3.1,19.1 L4.9,20.9 L20.9,4.9 L19.1,3.1 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.line}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Rectangle}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="F0 M3,5 H21 V19 H3 Z M5.3,7.3 V16.7 H18.7 V7.3 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.rectangle}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Ellipse}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="F0 M12,4.5 C16.97,4.5 21,7.86 21,12 C21,16.14 16.97,19.5 12,19.5 C7.03,19.5 3,16.14 3,12 C3,7.86 7.03,4.5 12,4.5 Z M12,6.8 C8.45,6.8 5.3,9.1 5.3,12 C5.3,14.9 8.45,17.2 12,17.2 C15.55,17.2 18.7,14.9 18.7,12 C18.7,9.1 15.55,6.8 12,6.8 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.ellipse}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Pen}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="M15.6,3.8 L20.2,8.4 L9,19.6 L3.6,20.4 L4.4,15 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.pen}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Text}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="M4,4.5 H20 V8.5 H18 V6.8 H13 V17.2 H15.5 V19.5 H8.5 V17.2 H11 V6.8 H6 V8.5 H4 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.text}" />
+            </Grid>
+          </ToggleButton>
+          <ToggleButton Classes="pchip tool" Tag="{x:Static t:AnnotationTool.Callout}" Click="OnToolClick">
+            <Grid ColumnDefinitions="18,8,*" Width="116">
+              <PathIcon Width="14" Height="14" Data="F0 M12,3 A9,9 0 1 1 11.99,3 Z M13.9,7.2 V16.8 H12.3 V9.5 L10.4,10.6 V9 L12.4,7.2 Z" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{DynamicResource panel.annotateImage.tool.callout}" />
+            </Grid>
+          </ToggleButton>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="pcard" Padding="14,10">
+        <StackPanel Spacing="8">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="plabel" Text="{DynamicResource panel.annotateImage.color}" />
+            <WrapPanel x:Name="Swatches" />
+          </StackPanel>
+          <StackPanel Spacing="1" IsEnabled="{Binding ThicknessEnabled}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="plabel" Text="{DynamicResource panel.annotateImage.thickness}" />
+              <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding Thickness, StringFormat='{}{0:0}'}" />
+            </Grid>
+            <Slider Minimum="1" Maximum="20" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Thickness}" />
+          </StackPanel>
+          <CheckBox MinHeight="24" IsEnabled="{Binding FillEnabled}" IsChecked="{Binding Filled}">
+            <TextBlock Text="{DynamicResource panel.annotateImage.fill}" TextWrapping="Wrap" FontSize="13" />
+          </CheckBox>
+          <StackPanel Spacing="1" IsEnabled="{Binding FontSizeEnabled}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="plabel" Text="{DynamicResource panel.annotateImage.fontsize}" />
+              <TextBlock Grid.Column="1" Classes="plabel" Text="{Binding FontSize, StringFormat='{}{0:0}'}" />
+            </Grid>
+            <Slider Minimum="12" Maximum="120" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding FontSize}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
+    <!-- actions · hint · the photo -->
+    <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Classes="pchip" Padding="12,5" Click="OnUndo" IsEnabled="{Binding CanUndo}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Viewbox Width="14" Height="14">
+              <Canvas Width="24" Height="24">
+                <Path Classes="picon" Data="M7,10 H14 A5,5 0 0 1 14,20 H8" Stroke="{Binding $parent[Button].Foreground}" />
+                <Path Data="M3,10 L9,4.5 V15.5 Z" Fill="{Binding $parent[Button].Foreground}" />
+              </Canvas>
+            </Viewbox>
+            <TextBlock Text="{DynamicResource panel.annotateImage.undo}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="pchip" Padding="12,5" Click="OnRedo" IsEnabled="{Binding CanRedo}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Viewbox Width="14" Height="14">
+              <Canvas Width="24" Height="24">
+                <Path Classes="picon" Data="M17,10 H10 A5,5 0 0 0 10,20 H16" Stroke="{Binding $parent[Button].Foreground}" />
+                <Path Data="M21,10 L15,4.5 V15.5 Z" Fill="{Binding $parent[Button].Foreground}" />
+              </Canvas>
+            </Viewbox>
+            <TextBlock Text="{DynamicResource panel.annotateImage.redo}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="pchip" Padding="12,5" Click="OnDeleteSelected" IsEnabled="{Binding HasSelection}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="13" Height="13" Data="F0 M9,3 H15 V5 H20 V7.2 H4 V5 H9 Z M6,9.2 H18 L17,21 H7 Z" />
+            <TextBlock Text="{DynamicResource panel.annotateImage.delete}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="pchip" Padding="12,5" Click="OnClearAll" IsEnabled="{Binding HasMarks}"
+                Content="{DynamicResource panel.annotateImage.clear}" />
+      </StackPanel>
+      <TextBlock Grid.Row="1" Classes="pwhite" Margin="2,8,0,0" TextTrimming="CharacterEllipsis" Text="{Binding Hint}" />
+
+      <Border Grid.Row="2" Classes="pwell" Margin="0,8,0,0">
+        <Panel>
+          <t:AnnotationCanvas x:Name="Board" Document="{Binding Document}" Photo="{Binding Photo}" ImageSize="{Binding ImageSize}"
+                              Tool="{Binding Tool}" SelectedId="{Binding SelectedId, Mode=TwoWay}" PenColor="{Binding Color}"
+                              PenThickness="{Binding Thickness}" FillShapes="{Binding Filled}" TextSize="{Binding FontSize}"
+                              HasPendingText="{Binding HasPendingText, Mode=OneWayToSource}" />
+          <TextBlock Text="{DynamicResource panel.annotateImage.loading}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Classes="plabel" IsVisible="{Binding IsLoading}" IsHitTestVisible="False" />
+          <TextBlock Text="{Binding LoadError}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"
+                     Margin="24" Classes="plabel" IsHitTestVisible="False"
+                     IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </Panel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

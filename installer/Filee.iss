@@ -8,7 +8,7 @@
 ;  - closes a running Filee first ("Filee.exe --quit") and moves FileeExplorerMenu.dll aside when Explorer has it
 ;    loaded, so updates need no restart;
 ;  - takes over an installation of Filee 1.1 or earlier (Velopack, per user in %LocalAppData%\Filee): removes it but
-;    keeps the settings (%APPDATA%\Filee) and downloaded engines (%LocalAppData%\Filee\engines);
+;    keeps the settings (%APPDATA%\Mandarina) and downloaded engines (%LocalAppData%\Mandarina\engines);
 ;  - on Windows 11 registers the top-level File Explorer menu entry (an unsigned sparse package, which needs the
 ;    administrator rights Setup already has);
 ;  - offers the optional conversion engines; Filee downloads the chosen ones (verified) when Setup starts it;
@@ -398,7 +398,7 @@ begin
       Folder := Copy(Rest, 1, Comma - 1);
       Rest := Copy(Rest, Comma + 1, MaxInt);
     end;
-    if not FileExists(ExpandConstant('{localappdata}\Filee\engines\') + Folder + '\' + EngineMarker) then
+    if not FileExists(ExpandConstant('{localappdata}\Mandarina\engines\') + Folder + '\' + EngineMarker) then
     begin
       Result := False;
       Exit;
