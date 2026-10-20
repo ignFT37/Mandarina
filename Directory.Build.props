@@ -14,7 +14,8 @@
          parameters of a member is fine (CS1573). -->
     <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
 
-    <Version>1.11.0</Version>
+    <!-- Mandarina's own version (Filee 1.11.0 is the base); releases pass -p:Version=<tag without the v>. -->
+    <Version>0.1.0</Version>
     <Product>Mandarina</Product>
     <Authors>Ignacio Insua; Filee contributors</Authors>
     <Copyright>Copyright (c) 2026 Ignacio Insua (Mandarina) and Filee contributors</Copyright>

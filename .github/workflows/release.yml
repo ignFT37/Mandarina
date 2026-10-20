@@ -1,0 +1,120 @@
+# Release: pushing a tag "v<major>.<minor>.<patch>[-suffix]" publishes win-x64, packs the portable zip and the installer, computes
+# their SHA-256 and attaches everything to a GitHub Release (a "-suffix" or a 0.x version is marked as a pre-release).
+# Run by hand (Actions > Release > Run workflow) it builds the same files and keeps them as a workflow artifact, with no Release.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          } else {
+            $version = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') { throw "Not a version: '$version' (tags look like v0.1.0)" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$(($version -match '-') -or $version.StartsWith('0.'))".ToLower() >> $env:GITHUB_OUTPUT
+
+      # The program embeds the Noto fonts; rhwp and 7-Zip are the only engines that ship inside it.
+      - name: Fonts and engines
+        shell: pwsh
+        run: |
+          ./build/fetch-fonts.ps1
+          ./build/fetch-engines.ps1 -Only rhwp,7zip
+
+      - name: Publish, zip and installer
+        shell: pwsh
+        run: ./tools/mandarina/package-mandarina.ps1 -Version '${{ steps.version.outputs.version }}'
+
+      - name: Check the installer was built
+        shell: pwsh
+        run: |
+          $setup = "artifacts/release/Mandarina-${{ steps.version.outputs.version }}-win-x64-setup.exe"
+          if (-not (Test-Path $setup)) { throw "No installer: $setup (is Inno Setup on the runner?)" }
+          Get-Content artifacts/release/SHA256SUMS.txt
+
+      # Installs and uninstalls the setup on the (disposable) runner and runs the zip's command line, so a broken package never
+      # reaches a Release.
+      - name: Smoke-test the zip and the installer
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $zip = Resolve-Path "artifacts/release/Mandarina-$version-win-x64.zip"
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP/zip"
+          $portable = "$env:RUNNER_TEMP/zip/Mandarina"
+          foreach ($file in 'Mandarina.exe', 'THIRD-PARTY-NOTICES.md', 'LICENSE', 'cli/mandarina.cmd', 'engines/rhwp', 'engines/7zip') {
+            if (-not (Test-Path "$portable/$file")) { throw "Missing from the zip: $file" }
+          }
+          & "$portable/cli/mandarina.cmd" help | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "mandarina help exited with $LASTEXITCODE" }
+
+          $setup = Resolve-Path "artifacts/release/Mandarina-$version-win-x64-setup.exe"
+          $install = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=cli', "/LOG=$env:RUNNER_TEMP/setup.log" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Setup exited with $($install.ExitCode)" }
+          $app = "$env:LOCALAPPDATA/Programs/Mandarina"
+          foreach ($file in 'Mandarina.exe', 'unins000.exe', 'cli/mandarina.cmd', 'engines/rhwp', 'engines/7zip') {
+            if (-not (Test-Path "$app/$file")) { throw "Missing after install: $file" }
+          }
+          if (-not (Test-Path "$([Environment]::GetFolderPath('Programs'))/Mandarina.lnk")) { throw 'No Start menu shortcut' }
+          $cli = ("$app/cli").Replace('/', '\')
+          if ((((Get-ItemProperty HKCU:\Environment).Path) -split ';') -notcontains $cli) { throw "$cli is not on the user PATH" }
+
+          $uninstall = Start-Process "$app/unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with $($uninstall.ExitCode)" }
+          Start-Sleep -Seconds 3
+          if (Test-Path "$app/Mandarina.exe") { throw 'Mandarina.exe is still there after uninstalling' }
+          if ((((Get-ItemProperty HKCU:\Environment).Path) -split ';') -contains $cli) { throw 'The PATH entry was not removed' }
+
+      - name: Upload the setup log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-log
+          path: ${{ runner.temp }}/setup.log
+          if-no-files-found: ignore
+
+      - name: Keep the files (manual runs)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mandarina-${{ steps.version.outputs.version }}-win-x64
+          path: artifacts/release/*
+          retention-days: 7
+
+      - name: Create the Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @'
+          Unsigned binaries: Windows SmartScreen and Smart App Control may warn about or block them. Verify the download against
+          `SHA256SUMS.txt`, and see "Unsigned downloads" in the README. FFmpeg, Pandoc and the Whisper models are not included;
+          Mandarina downloads the ones you choose from Settings → Engines.
+          '@
+          $flags = @('--generate-notes', '--notes', $notes, '--verify-tag')
+          if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { $flags += '--prerelease' }
+          gh release create $env:GITHUB_REF_NAME --title "Mandarina ${{ steps.version.outputs.version }}" @flags `
+            (Get-ChildItem artifacts/release -File).FullName

@@ -49,9 +49,33 @@ What each wheel and tool does, in detail: [docs/mandarina/ESPECIFICACION.md](doc
 
 ## Status
 
-Windows 10/11 only, and young: expect rough edges. There are no binary releases yet; build it from source.
+Windows 10/11 only, and young: expect rough edges. Binary releases are unsigned (see Install); you can also build it from source.
 
-## Build and install
+## Install
+
+Download **`Mandarina-<version>-win-x64-setup.exe`** (installer, for you only, no administrator rights) or
+**`Mandarina-<version>-win-x64.zip`** (portable: unzip anywhere and run `Mandarina.exe`) from the
+[latest release](https://github.com/ignFT37/Mandarina/releases/latest). Windows 10/11, 64-bit; nothing else to install. The installer adds a Start menu shortcut and, if you
+leave the box ticked, the `mandarina` command to your PATH.
+
+Check the download against `SHA256SUMS.txt` from the same release:
+
+```powershell
+Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
+```
+
+**Unsigned downloads.** The files are not code-signed (no certificate yet), so Windows is wary of them:
+- *SmartScreen* ("Windows protected your PC") appears on files downloaded from the web: click **More info → Run anyway**. For the
+  zip, right-click it → Properties → **Unblock** before extracting, or the warning is repeated for every `.exe` and `.dll`.
+- *Smart App Control* (Windows 11, on a clean install) can block unsigned programs and DLLs without an "run anyway" button. If it
+  does, Mandarina cannot run on that PC unless you turn it off (Windows Security → App & browser control → Smart App Control);
+  Windows only lets you turn it off, not back on without reinstalling Windows. That is your call: if you prefer not to, build it
+  from source (below).
+
+FFmpeg, Pandoc and the Whisper models are not included: Mandarina downloads the ones you choose from Settings → Engines.
+The license texts of everything inside the download are in `THIRD-PARTY-NOTICES.md`.
+
+## Build from source
 
 You need Git, the [.NET 10 SDK](https://dotnet.microsoft.com/download) and PowerShell 7 (`pwsh`).
 

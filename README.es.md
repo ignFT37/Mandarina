@@ -48,9 +48,34 @@ Qué hace cada rueda y cada herramienta, con detalle: [docs/mandarina/ESPECIFICA
 
 ## Estado
 
-Solo Windows 10/11, y joven: habrá asperezas. Todavía no hay versiones compiladas; se construye desde el código.
+Solo Windows 10/11, y joven: habrá asperezas. Las versiones compiladas no están firmadas (ver Instalar); también puedes construirla desde el código.
 
-## Compilar e instalar
+## Instalar
+
+Descarga **`Mandarina-<versión>-win-x64-setup.exe`** (instalador, solo para ti, sin permisos de administrador) o
+**`Mandarina-<versión>-win-x64.zip`** (portátil: descomprímelo donde quieras y abre `Mandarina.exe`) de la
+[última versión](https://github.com/ignFT37/Mandarina/releases/latest). Windows 10/11 de 64 bits; no hace falta instalar nada más. El instalador crea el acceso directo en
+Inicio y, si dejas la casilla marcada, añade el comando `mandarina` al PATH.
+
+Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión:
+
+```powershell
+Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
+```
+
+**Descargas sin firmar.** Los archivos no llevan firma de código (todavía no hay certificado), así que Windows desconfía:
+- *SmartScreen* («Windows protegió su PC») sale con lo descargado de internet: pulsa **Más información → Ejecutar de todas
+  formas**. Con el zip, haz clic derecho → Propiedades → **Desbloquear** antes de extraer; si no, el aviso se repite en cada
+  `.exe` y `.dll`.
+- *Smart App Control* (Windows 11 recién instalado) puede bloquear programas y DLL sin firmar, sin botón de «ejecutar de todas
+  formas». Si pasa, Mandarina no arrancará en ese PC salvo que lo desactives (Seguridad de Windows → Control de aplicaciones y
+  navegador → Smart App Control); una vez apagado, Windows no deja volver a encenderlo sin reinstalarlo. Decídelo tú: si no
+  quieres, compílala desde el código (abajo).
+
+FFmpeg, Pandoc y los modelos de Whisper no van incluidos: Mandarina descarga los que elijas en Ajustes → Motores.
+Las licencias de todo lo que lleva la descarga están en `THIRD-PARTY-NOTICES.md`.
+
+## Compilar desde el código
 
 Necesitas Git, el [SDK de .NET 10](https://dotnet.microsoft.com/download) y PowerShell 7 (`pwsh`).
 

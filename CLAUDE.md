@@ -42,6 +42,11 @@
   - Ejecutar: `%USERPROFILE%\.mandarina\build\Filee.App\bin\Debug\net10.0\Filee.exe`.
   - Abrir una herramienta sin la rueda: `Mandarina.exe --panel trimAudio <archivos>`; `--tools` y `--actions` abren esa rueda.
   - Publicar e instalar: `tools/mandarina/publish-mandarina.ps1` y `tools/mandarina/install-mandarina.ps1`.
+  - Versiones para descargar: `tools/mandarina/package-mandarina.ps1` (zip portable + instalador de `installer/Mandarina.iss`
+    con Inno Setup + `SHA256SUMS.txt`, en `artifacts\release`, con su propia raíz de compilación `.mandarina\build-release`).
+    Las crea `.github/workflows/release.yml` al empujar una etiqueta `vX.Y.Z` (la versión sale de la etiqueta; la de
+    `Directory.Build.props` es la de los builds locales y la que enseña «Acerca de»). Nunca instales/desinstales el instalador en
+    este PC para probarlo: su desinstalador borra el inicio con Windows, el menú contextual y los motores descargados reales.
 - Los textos de la interfaz están en `src/Filee.App/Assets/i18n/*.json`. Cada clave nueva va en todos los idiomas
   (en, es, ko, zh-CN); un test lo comprueba. `python tools/mandarina/i18n_tool.py add . spec.json` añade claves a los cuatro.
   Textos propios: no copies frases de otros productos.

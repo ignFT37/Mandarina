@@ -1,13 +1,15 @@
 # Publishes Mandarina (the app and the `mandarina` command) into one folder, ready for install-mandarina.ps1.
 #
-#   pwsh tools/mandarina/publish-mandarina.ps1 [-Output <folder>]
+#   pwsh tools/mandarina/publish-mandarina.ps1 [-Output <folder>] [-Version <x.y.z>]
 #
 # Needs the .NET 10 SDK and the two engines that ship inside the program, rhwp and 7-Zip. They are taken from the checkout's
 # engines/ folder or from %USERPROFILE%\.mandarina\engines; fetch them once with:  pwsh build/fetch-engines.ps1 -Only rhwp,7zip
 # The result is a self-contained win-x64 build: Mandarina's launcher is Filee.exe here and install-mandarina.ps1 renames it.
 [CmdletBinding()]
 param(
-    [string]$Output = (Join-Path $env:USERPROFILE '.mandarina\publish\win-x64')
+    [string]$Output = (Join-Path $env:USERPROFILE '.mandarina\publish\win-x64'),
+    # Overrides the Version of Directory.Build.props (the release workflow passes the tag's).
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +17,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 # The app and the command line go to the same folder, so they share the runtime.
 $options = @('-c', 'Release', '-r', 'win-x64', '--self-contained', '-p:PublishReadyToRun=true', '-p:FileeRelease=true', '-o', $Output, '-nologo', '-v', 'q')
+if ($Version) { $options += "-p:Version=$Version" }
 foreach ($project in 'src\Filee.App\Filee.App.csproj', 'src\Filee.Cli\Filee.Cli.csproj') {
     dotnet publish (Join-Path $repo $project) @options
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $project" }
