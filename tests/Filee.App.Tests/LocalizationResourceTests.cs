@@ -20,12 +20,15 @@ public class LocalizationResourceTests
         TestServices.EnsureInitialized("en");
         var text = new TextBlock();
         text.Bind(TextBlock.TextProperty, text.GetResourceObservable("home.title"));
-        var window = new Window { Content = text };
+        var toggle = new ToggleSwitch();
+        var window = new Window { Content = new StackPanel { Children = { text, toggle } } };
         window.Show();
         Assert.Equal("Home", text.Text);
 
         TestServices.EnsureInitialized("ko");
         Assert.Equal("홈", text.Text);
+        TestServices.EnsureInitialized("es"); // Mandarina: Filee's "ja" is not offered
+        Assert.Equal("Inicio", text.Text);
         window.Close();
     }
 }

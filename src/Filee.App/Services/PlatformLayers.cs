@@ -44,14 +44,28 @@ internal static class PlatformLayers
     private static string? MacLanguage() => MacOSLocale.PreferredLanguage();
 
     /// <summary>macOS: "Convert with Filee" in Finder's Services menu.</summary>
-    public static void RegisterMacServices(Action<IReadOnlyList<string>> convert)
+    public static void RegisterMacServices(Action<IReadOnlyList<string>> convert, Action<IReadOnlyList<string>> noFiles)
     {
         if (OperatingSystem.IsMacOS())
-            RegisterMac(convert);
+            RegisterMac(convert, noFiles);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void RegisterMac(Action<IReadOnlyList<string>> convert) => MacOSServicesProvider.Register(files => convert(files));
+    private static void RegisterMac(Action<IReadOnlyList<string>> convert, Action<IReadOnlyList<string>> noFiles) =>
+        MacOSServicesProvider.Register(files => convert(files), types => noFiles(types));
+
+    /// <summary>macOS: lets the donut's window take file drags (once per window).</summary>
+    public static bool AcceptMacFileDrags(IPlatformServices? platform, nint handle) =>
+        OperatingSystem.IsMacOS() && AcceptDrags(platform, handle);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool AcceptDrags(IPlatformServices? platform, nint handle)
+    {
+        if (platform is not MacOSPlatformServices mac)
+            return false;
+        mac.AcceptFileDrags(handle);
+        return true;
+    }
 
     public static void OpenMacAccessibilitySettings(IPlatformServices? platform)
     {
@@ -115,6 +129,8 @@ internal static class PlatformLayers
     /// <summary>The notice on the Shortcuts page for macOS and Linux; null on Windows.</summary>
     public static string? ShortcutsNotice(IPlatformServices? platform, ILocalizer loc) =>
         IsMac(platform) ? loc["triggers.macos_permissions"]
-        : IsLinux(platform) ? loc[IsWaylandSession ? "triggers.linux_wayland" : "triggers.linux_x11"]
+        : IsLinux(platform) ? loc[IsWaylandSession
+            ? platform!.SupportsGlobalPointerGestures ? "triggers.linux_wayland_experimental" : "triggers.linux_wayland"
+            : "triggers.linux_x11"]
         : null;
 }

@@ -6,6 +6,7 @@
 // the PC (on the PATH or where its installer puts it), so nobody has to download a second FFmpeg they already have.
 
 using System.Collections.Concurrent;
+using Filee.Core.Settings;
 
 namespace Filee.Engines.Infrastructure;
 
@@ -19,10 +20,15 @@ public sealed class EngineEnvironment(string dataDirectory)
     /// <summary>
     /// Per-user folder for engines downloaded on demand (see <see cref="EngineInstaller"/>):
     /// %LOCALAPPDATA%\Filee\engines. It is outside the app folder, so app updates keep it, and inside Filee's
-    /// install root, so uninstalling removes it.
+    /// install root, so uninstalling removes it. With FILEE_DATA_DIR set (<see cref="UserDataStore.DirectoryVariable"/>)
+    /// it is the engines folder in there.
     /// </summary>
-    public static string DownloadRoot { get; set; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mandarina", "engines");
+    public static string DownloadRoot { get; set; } = DefaultDownloadRoot(UserDataStore.OverrideDirectory);
+
+    internal static string DefaultDownloadRoot(string? dataDirectoryOverride) =>
+        dataDirectoryOverride is not null
+            ? Path.Combine(dataDirectoryOverride, "engines")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mandarina", "engines"); // Mandarina: own folder
 
     /// <summary>
     /// Finds an engine directory (<c>engines/&lt;name&gt;</c>): next to the executable (bundled with the installer),
@@ -155,10 +161,45 @@ public sealed class EngineEnvironment(string dataDirectory)
         SystemCopies.Clear();
         // Mandarina: Office's self-test results (which of Word, Excel and PowerPoint could really convert) are forgotten too.
         Office.OfficeSelfTest.Forget();
+        ReachableShares.Clear();
     }
 
     private static string? FindOnSystem(string id) =>
-        SystemFolders(id).Select(folder => FolderWithPrograms(id, folder)).FirstOrDefault(found => found is not null);
+        SystemFolders(id).Where(IsReachable).Select(folder => FolderWithPrograms(id, folder)).FirstOrDefault(found => found is not null);
+
+    /// <summary>How long a network share on the PATH may take to answer before the search leaves it out.</summary>
+    private static readonly TimeSpan ShareTimeout = TimeSpan.FromSeconds(2);
+
+    private static readonly ConcurrentDictionary<string, bool> ReachableShares = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// False for a folder on a network share that doesn't answer in time. A PATH entry on a server that is offline
+    /// (a mapped work share at home) made every file check wait for the network timeout, many seconds each, and the
+    /// search runs for every engine. Each share is asked once, until <see cref="ForgetSystemCopies"/>.
+    /// </summary>
+    private static bool IsReachable(string folder)
+    {
+        if (ShareOf(folder) is not { } share)
+            return true;
+        return ReachableShares.GetOrAdd(share, s =>
+        {
+            var probe = Task.Run(() => Directory.Exists(s));
+            return probe.Wait(ShareTimeout) && probe.Result;
+        });
+    }
+
+    /// <summary>
+    /// The share root of a UNC path (<c>\\server\share</c>), or null for a local path. Device paths (<c>\\?\</c>,
+    /// <c>\\.\</c>) are local. Plain string work, the same on every OS.
+    /// </summary>
+    internal static string? ShareOf(string path)
+    {
+        if (!path.StartsWith(@"\\", StringComparison.Ordinal) || path.StartsWith(@"\\?\", StringComparison.Ordinal)
+            || path.StartsWith(@"\\.\", StringComparison.Ordinal))
+            return null;
+        var parts = path[2..].Split('\\', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? $@"\\{parts[0]}\{parts[1]}" : parts.Length == 1 ? $@"\\{parts[0]}" : null;
+    }
 
     private static IEnumerable<string> SystemFolders(string id)
     {

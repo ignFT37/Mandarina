@@ -1,6 +1,6 @@
 <!--
   Donut toolbar editor.
-  1. Pick a profile on the left.   2. Arrange its presets on the live donut:
+  1. Pick a profile on the left.   2. Arrange its presets on the live donut, front or back face (the switch above it):
      chip → donut = add · slice → palette = remove · slice → slice = reorder · right-click / ✎ = edit.
   Drag & drop is implemented in ToolbarPage.axaml.cs.
   The profile card edits a normal profile's extensions as chips (TagEditor) or, for a mixed-selection profile, which
@@ -37,6 +37,38 @@
     </Style>
     <Style Selector="TextBlock.caption.warning">
       <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    </Style>
+
+    <!-- Front / Back switch above the donut: two segments in a pill, the face being edited filled with the accent -->
+    <Style Selector="Border.faces">
+      <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="3" />
+    </Style>
+    <Style Selector="RadioButton.face">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" CornerRadius="999" Padding="16,5">
+            <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="RadioButton.face:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="RadioButton.face:checked">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    </Style>
+    <Style Selector="RadioButton.face TextBlock.count">
+      <Setter Property="FontWeight" Value="Normal" />
+      <Setter Property="Opacity" Value="0.8" />
     </Style>
 
     <!-- Mixed-selection check list: group rows with a chevron, extension toggle chips -->
@@ -138,13 +170,34 @@
       <StackPanel Grid.Column="2" Spacing="12">
         <TextBlock Classes="label" Text="{DynamicResource toolbar.step_arrange}" />
         <Border Classes="card" Padding="8">
-          <c:DonutMenu x:Name="Donut" IsEditMode="True" HorizontalAlignment="Center"
-                       Items="{Binding DonutItems}"
-                       CenterTitle="{Binding CenterTitle}"
-                       CenterSubtitle="{Binding CenterSubtitle}"
-                       OuterRadius="{Binding OuterRadius}"
-                       HoleRatio="{Binding HoleRatio, Converter={x:Static vm:ToolbarConverters.Percent}}"
-                       SliceOpacity="{Binding SliceOpacity, Converter={x:Static vm:ToolbarConverters.Percent}}" />
+          <StackPanel>
+            <!-- Which face of the donut the slices below are: the front, or the back Tab flips the open donut to. -->
+            <Border x:Name="FaceSwitch" Classes="faces" HorizontalAlignment="Center" Margin="0,6,0,0">
+              <StackPanel Orientation="Horizontal">
+                <RadioButton Classes="face" IsChecked="{Binding EditingFront}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{DynamicResource toolbar.face_front}" />
+                    <TextBlock Classes="count" Text="{Binding FrontCount}" />
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton Classes="face" IsChecked="{Binding EditingBack}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{DynamicResource toolbar.face_back}" />
+                    <TextBlock Classes="count" Text="{Binding BackCount}" />
+                  </StackPanel>
+                </RadioButton>
+              </StackPanel>
+            </Border>
+            <TextBlock Classes="caption" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                       Margin="12,6,12,0" Text="{Binding FaceHint}" />
+            <c:DonutMenu x:Name="Donut" IsEditMode="True" HorizontalAlignment="Center"
+                         Items="{Binding DonutItems}"
+                         CenterTitle="{Binding CenterTitle}"
+                         CenterSubtitle="{Binding CenterSubtitle}"
+                         OuterRadius="{Binding OuterRadius}"
+                         HoleRatio="{Binding HoleRatio, Converter={x:Static vm:ToolbarConverters.Percent}}"
+                         SliceOpacity="{Binding SliceOpacity, Converter={x:Static vm:ToolbarConverters.Percent}}" />
+          </StackPanel>
         </Border>
         <TextBlock Classes="caption danger" Text="{Binding Message}" HorizontalAlignment="Center" />
 
@@ -243,8 +296,13 @@
               </ContentControl.ContentTemplate>
             </ContentControl>
 
-            <Button HorizontalAlignment="Right" Content="{DynamicResource toolbar.delete_profile}" Command="{Binding DeleteProfileCommand}"
-                    IsVisible="{Binding CanDelete}" />
+            <!-- Only a built-in profile has a default to go back to; the last mixed one can't be deleted. -->
+            <StackPanel x:Name="ProfileActions" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+              <Button Content="{DynamicResource toolbar.reset_profile}" Command="{Binding ResetProfileCommand}"
+                      IsVisible="{Binding CanReset}" />
+              <Button Content="{DynamicResource toolbar.delete_profile}" Command="{Binding DeleteProfileCommand}"
+                      IsVisible="{Binding CanDelete}" />
+            </StackPanel>
           </StackPanel>
         </Border>
 

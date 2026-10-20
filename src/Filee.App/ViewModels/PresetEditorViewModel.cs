@@ -25,6 +25,23 @@ public sealed record Choice<T>(T Value, string Label, string? Detail = null) : I
     public override string ToString() => Label;
 }
 
+/// <summary>Selections bound to properties that always hold a value (a choice, the open page).</summary>
+public static class Choices
+{
+    /// <summary>
+    /// For the OnXxxChanged(oldValue, newValue) hook of such a property. A combo box or list box sets null when it
+    /// loses its selection (the selected item toggled off, its items replaced): the previous value is put back through
+    /// <paramref name="restore"/>, which also shows it in the control again. Returns true then, so the hook stops.
+    /// </summary>
+    public static bool Restore<T>(T? oldValue, T? newValue, Action<T> restore) where T : class
+    {
+        if (newValue is not null || oldValue is null)
+            return false;
+        restore(oldValue);
+        return true;
+    }
+}
+
 public sealed partial class PresetEditorViewModel : ObservableObject
 {
     private static readonly HashSet<string> LossyTargets = ["jpg", "webp", "avif", "heic"];
@@ -63,6 +80,7 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         Rotations = Enum.GetValues<ImageRotation>().Select(v => new Choice<ImageRotation>(v, loc[$"presets.rotation.{v}"])).ToList();
         Flips = Enum.GetValues<ImageFlip>().Select(v => new Choice<ImageFlip>(v, loc[$"presets.flip.{v}"])).ToList();
         PageSizes = Enum.GetValues<PdfPageSize>().Select(v => new Choice<PdfPageSize>(v, loc[$"presets.page_size.{v}"])).ToList();
+        CompressionLevels = Enum.GetValues<PdfCompression>().Select(v => new Choice<PdfCompression>(v, loc[$"presets.pdf_compression.{v}"])).ToList();
         Locations = Enum.GetValues<OutputLocation>().Select(v => new Choice<OutputLocation>(v, loc[$"presets.location.{v}"])).ToList();
         Conflicts = Enum.GetValues<ConflictPolicy>().Select(v => new Choice<ConflictPolicy>(v, loc[$"presets.conflict.{v}"])).ToList();
         TiffCompressions = Enum.GetValues<TiffCompression>().Select(v => new Choice<TiffCompression>(v, v.ToString().ToUpperInvariant())).ToList();
@@ -75,6 +93,9 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         WavFormats = Enum.GetValues<WavSampleFormat>().Select(v => new Choice<WavSampleFormat>(v, loc[$"presets.wav_format.{v}"])).ToList();
         ArchiveLevels = Enum.GetValues<ArchiveLevel>().Select(v => new Choice<ArchiveLevel>(v, loc[$"presets.archive_level.{v}"])).ToList();
         TraceModes = Enum.GetValues<TracingMode>().Select(v => new Choice<TracingMode>(v, loc[$"presets.trace_mode.{v}"])).ToList();
+        // A speed set outside the editor (a hand-edited preset file) is offered too, instead of being lost.
+        AnimationSpeeds = [.. ImageOptions.AnimationSpeeds.Append(_edit.Image.PlaybackSpeed).Distinct().Order()
+            .Select(s => new Choice<double>(s, s == 1 ? loc["presets.animation_speed.original"] : SpeedLabel(s)))];
 
         _name = string.IsNullOrWhiteSpace(_edit.Name) ? loc.DisplayName(_edit) : _edit.Name;
         _target = Targets.FirstOrDefault(t => t.Value == _edit.TargetFormat) ?? Targets[1];
@@ -82,6 +103,8 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         _rotation = Rotations.FirstOrDefault(r => r.Value == _edit.Image.Rotation) ?? Rotations[0];
         _flip = Flips.FirstOrDefault(f => f.Value == _edit.Image.Flip) ?? Flips[0];
         _pageSize = PageSizes.First(p => p.Value == _edit.Pdf.PageSize);
+        _compressionLevel = CompressionLevels.FirstOrDefault(c => c.Value == _edit.Pdf.Compression) ?? CompressionLevels[0];
+        _compressWithGhostscript = _edit.Pdf.CompressWithGhostscript;
         _location = Locations.First(l => l.Value == _edit.Output.Location);
         _conflict = Conflicts.First(c => c.Value == _edit.Output.Conflict);
         _tiffCompression = TiffCompressions.First(t => t.Value == _edit.Image.TiffCompression);
@@ -94,9 +117,14 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         _wavFormat = WavFormats.First(f => f.Value == _edit.Media.WavFormat);
         _videoCodecValue = _edit.Media.VideoCodec;
         _audioCodecValue = _edit.Media.AudioCodec;
+        _hardwareEncoding = _edit.Media.HardwareEncoding;
         _archiveLevel = ArchiveLevels.First(l => l.Value == _edit.Archive.Level);
         _combineIntoOne = _edit.Archive.CombineIntoOne;
+        _saveEveryFrame = _edit.Media.SaveEveryFrame;
+        _extractMotionPhoto = _edit.Media.ExtractMotionPhoto;
+        _frameInterval = _edit.Media.FrameInterval > 0 ? _edit.Media.FrameInterval : 1;
         _traceMode = TraceModes.First(m => m.Value == _edit.Trace.Mode);
+        _animationSpeed = AnimationSpeeds.First(s => s.Value == _edit.Image.PlaybackSpeed);
         _traceColors = Math.Clamp(_edit.Trace.Colors, TracingOptions.MinColors, TracingOptions.MaxColors);
         _traceDetail = Math.Clamp(_edit.Trace.Detail, 0, 100);
         _quality = _edit.Image.Quality;
@@ -124,13 +152,17 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         _trimPageMargins = _edit.Pdf.TrimPageMargins;
         _splitTallImage = _edit.Pdf.SplitTallImage;
         _pdfA = _edit.Document.PdfA;
+        _leaveOutPictures = _edit.Document.LeaveOutPictures;
         _subfolderName = _edit.Output.SubfolderName;
         _customFolder = _edit.Output.CustomFolder;
         _pattern = _edit.Output.FileNamePattern;
         _keepDates = _edit.Output.KeepDates;
+        _zipResult = _edit.Output.ZipResult;
     }
 
     public string PresetId => _original.Id;
+    public bool IsTool => _original.IsTool;
+    public bool CanChangeTarget => !IsTool;
 
     public IReadOnlyList<Choice<string>> Targets { get; }
     public IReadOnlyList<Choice<ResizeMode>> ResizeModes { get; }
@@ -139,6 +171,9 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     public IReadOnlyList<Choice<ImageRotation>> Rotations { get; }
     public IReadOnlyList<Choice<ImageFlip>> Flips { get; }
     public IReadOnlyList<Choice<PdfPageSize>> PageSizes { get; }
+
+    /// <summary>PDF → PDF: don't compress, or the level (pictures at 72, 150 or 300 dpi).</summary>
+    public IReadOnlyList<Choice<PdfCompression>> CompressionLevels { get; }
     public IReadOnlyList<Choice<OutputLocation>> Locations { get; }
     public IReadOnlyList<Choice<ConflictPolicy>> Conflicts { get; }
     public IReadOnlyList<Choice<TiffCompression>> TiffCompressions { get; }
@@ -151,16 +186,21 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     public IReadOnlyList<Choice<ArchiveLevel>> ArchiveLevels { get; }
     public IReadOnlyList<Choice<TracingMode>> TraceModes { get; }
 
+    /// <summary>Playback speeds of animations, 0.25× to 4× (ImageOptions.AnimationSpeed).</summary>
+    public IReadOnlyList<Choice<double>> AnimationSpeeds { get; }
+
     [ObservableProperty, NotifyPropertyChangedFor(nameof(NameError), nameof(IsValid))]
     private string _name;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowImage), nameof(ShowTurnForPdf), nameof(ShowQuality), nameof(ShowTiff), nameof(ShowMultiPageTiff), nameof(ShowWebp), nameof(ShowIco),
-        nameof(ShowPdf), nameof(ShowPdfBuild), nameof(ShowDocument), nameof(ShowPdfSplit), nameof(ShowPdfCombine),
+        nameof(ShowZipResult), nameof(ShowPdf), nameof(ShowPdfBuild), nameof(ShowDocument), nameof(ShowLeaveOutPictures), nameof(ShowPdfSplit), nameof(ShowPdfCombine),
+        nameof(ShowPdfCompression), nameof(ShowPdfCompressionOptions),
         nameof(ShowMedia), nameof(ShowMediaQuality), nameof(ShowMaxHeight), nameof(ShowAudioBitrate), nameof(ShowRemoveAudio),
-        nameof(ShowAudioChannels), nameof(ShowWav), nameof(VideoCodecs), nameof(VideoCodecChoice), nameof(ShowVideoCodec),
+        nameof(ShowAudioChannels), nameof(ShowWav), nameof(VideoCodecs), nameof(VideoCodecChoice), nameof(ShowVideoCodec), nameof(ShowHardwareEncoding),
         nameof(AudioCodecs), nameof(AudioCodecChoice), nameof(ShowAudioCodec),
-        nameof(ShowArchive), nameof(ShowArchiveOptions), nameof(ShowExtractNote), nameof(ShowTrace))]
+        nameof(ShowArchive), nameof(ShowArchiveOptions), nameof(ShowExtractNote),
+        nameof(ShowSaveEveryFrame), nameof(ShowAnimationSpeed), nameof(ShowTrace), nameof(ShowExtractMotionPhoto))]
     private Choice<string> _target;
 
     private VideoCodec _videoCodecValue;
@@ -181,11 +221,18 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         get => VideoCodecs.FirstOrDefault(c => c.Value == _videoCodecValue) ?? VideoCodecs[0];
         set
         {
-            // The combo box clears its selection while its list is replaced.
-            if (value is null || value.Value == _videoCodecValue)
+            // The combo box clears its selection while its list is replaced (or the selected item is toggled off):
+            // announcing the value shows it again.
+            if (value is null)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            if (value.Value == _videoCodecValue)
                 return;
             _videoCodecValue = value.Value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowHardwareEncoding));
         }
     }
 
@@ -199,7 +246,12 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         get => AudioCodecs.FirstOrDefault(c => c.Value == _audioCodecValue) ?? AudioCodecs[0];
         set
         {
-            if (value is null || value.Value == _audioCodecValue)
+            if (value is null)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            if (value.Value == _audioCodecValue)
                 return;
             _audioCodecValue = value.Value;
             OnPropertyChanged();
@@ -265,15 +317,25 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     [ObservableProperty] private string _pageRange;
     [ObservableProperty] private bool _splitPages;
 
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ShowPdfCompressionOptions))]
+    private Choice<PdfCompression> _compressionLevel;
+
+    [ObservableProperty] private bool _compressWithGhostscript;
+
     /// <summary>PDF → image: one tall image of all pages.</summary>
     [ObservableProperty] private bool _combinePages;
     [ObservableProperty] private bool _trimPageMargins;
     [ObservableProperty] private bool _splitTallImage;
     [ObservableProperty] private bool _pdfA;
+
+    /// <summary>Markdown: the text only, no picture folder next to it (DocumentOptions.LeaveOutPictures).</summary>
+    [ObservableProperty] private bool _leaveOutPictures;
     [ObservableProperty] private string _subfolderName;
     [ObservableProperty] private string _customFolder;
     [ObservableProperty] private string _pattern;
     [ObservableProperty] private bool _keepDates;
+    /// <summary>Geospatial targets: the result is saved as one ZIP (OutputRule.ZipResult).</summary>
+    [ObservableProperty] private bool _zipResult;
     [ObservableProperty] private Choice<MediaQuality> _mediaQuality;
     [ObservableProperty] private Choice<int> _maxHeight;
     [ObservableProperty] private Choice<int> _audioBitrate;
@@ -281,14 +343,50 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     [ObservableProperty] private Choice<int> _sampleRate;
     [ObservableProperty] private Choice<WavSampleFormat> _wavFormat;
     [ObservableProperty] private bool _removeAudio;
+
+    /// <summary>Encode H.264 / HEVC on the graphics chip when one works (MediaOptions.HardwareEncoding).</summary>
+    [ObservableProperty] private bool _hardwareEncoding;
     [ObservableProperty] private Choice<ArchiveLevel> _archiveLevel;
     [ObservableProperty] private bool _combineIntoOne;
+    [ObservableProperty] private bool _saveEveryFrame;
+    [ObservableProperty] private bool _extractMotionPhoto;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(FrameEstimate))]
+    private int _frameInterval = 1;
+
+    /// <summary>How many pictures a minute of 30 fps video gives at the chosen interval, and the limit per video.</summary>
+    public string FrameEstimate => _loc.Format("presets.frame_estimate",
+        (int)Math.Ceiling(1800.0 / Math.Clamp(FrameInterval, 1, 1000)), MediaOptions.MaxFrames.ToString("N0", System.Globalization.CultureInfo.InvariantCulture));
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ShowTraceColors))]
     private Choice<TracingMode> _traceMode;
 
     [ObservableProperty] private int _traceColors;
     [ObservableProperty] private int _traceDetail;
+    [ObservableProperty] private Choice<double> _animationSpeed;
+
+    // A combo box that loses its selection sets null: every choice keeps its value (see Choices.Restore).
+    partial void OnTargetChanged(Choice<string>? oldValue, Choice<string> newValue) => Choices.Restore(oldValue, newValue, v => Target = v);
+    partial void OnResizeChanged(Choice<ResizeMode>? oldValue, Choice<ResizeMode> newValue) => Choices.Restore(oldValue, newValue, v => Resize = v);
+    partial void OnRotationChanged(Choice<ImageRotation>? oldValue, Choice<ImageRotation> newValue) => Choices.Restore(oldValue, newValue, v => Rotation = v);
+    partial void OnFlipChanged(Choice<ImageFlip>? oldValue, Choice<ImageFlip> newValue) => Choices.Restore(oldValue, newValue, v => Flip = v);
+    partial void OnPageSizeChanged(Choice<PdfPageSize>? oldValue, Choice<PdfPageSize> newValue) => Choices.Restore(oldValue, newValue, v => PageSize = v);
+    partial void OnLocationChanged(Choice<OutputLocation>? oldValue, Choice<OutputLocation> newValue) => Choices.Restore(oldValue, newValue, v => Location = v);
+    partial void OnConflictChanged(Choice<ConflictPolicy>? oldValue, Choice<ConflictPolicy> newValue) => Choices.Restore(oldValue, newValue, v => Conflict = v);
+    partial void OnTiffCompressionChanged(Choice<TiffCompression>? oldValue, Choice<TiffCompression> newValue) =>
+        Choices.Restore(oldValue, newValue, v => TiffCompression = v);
+    partial void OnMediaQualityChanged(Choice<MediaQuality>? oldValue, Choice<MediaQuality> newValue) => Choices.Restore(oldValue, newValue, v => MediaQuality = v);
+    partial void OnMaxHeightChanged(Choice<int>? oldValue, Choice<int> newValue) => Choices.Restore(oldValue, newValue, v => MaxHeight = v);
+    partial void OnAudioBitrateChanged(Choice<int>? oldValue, Choice<int> newValue) => Choices.Restore(oldValue, newValue, v => AudioBitrate = v);
+    partial void OnAudioChannelsChanged(Choice<int>? oldValue, Choice<int> newValue) => Choices.Restore(oldValue, newValue, v => AudioChannels = v);
+    partial void OnSampleRateChanged(Choice<int>? oldValue, Choice<int> newValue) => Choices.Restore(oldValue, newValue, v => SampleRate = v);
+    partial void OnWavFormatChanged(Choice<WavSampleFormat>? oldValue, Choice<WavSampleFormat> newValue) => Choices.Restore(oldValue, newValue, v => WavFormat = v);
+    partial void OnArchiveLevelChanged(Choice<ArchiveLevel>? oldValue, Choice<ArchiveLevel> newValue) => Choices.Restore(oldValue, newValue, v => ArchiveLevel = v);
+    partial void OnTraceModeChanged(Choice<TracingMode>? oldValue, Choice<TracingMode> newValue) => Choices.Restore(oldValue, newValue, v => TraceMode = v);
+    partial void OnCompressionLevelChanged(Choice<PdfCompression>? oldValue, Choice<PdfCompression> newValue) =>
+        Choices.Restore(oldValue, newValue, v => CompressionLevel = v);
+    partial void OnAnimationSpeedChanged(Choice<double>? oldValue, Choice<double> newValue) =>
+        Choices.Restore(oldValue, newValue, v => AnimationSpeed = v);
 
     private string TargetId => Target.Value;
     private FormatCategory? TargetCategory => FormatRegistry.FindById(TargetId)?.Category;
@@ -298,26 +396,35 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     private bool TargetIsLossyMedia => TargetIsVideo
         || (TargetIsAudio && !LosslessAudioTargets.Contains(TargetId) && MediaCodecs.Effective(TargetId, _audioCodecValue) != AudioCodec.Alac);
 
-    public bool ShowImage => TargetIsImage;
+    /// <summary>A tool (Crop) keeps the source as it is: none of the image options apply.</summary>
+    public bool ShowImage => !IsTool && TargetIsImage;
     /// <summary>Images and PDFs (pictures placed on pages) can be turned and flipped.</summary>
     private bool CanTurn => TargetIsImage || TargetId == "pdf";
     /// <summary>Rotate and flip for a PDF target, which has no image card to show them in.</summary>
     public bool ShowTurnForPdf => TargetId == "pdf";
-    public bool ShowQuality => TargetId == BuiltInData.SameAsSource || LossyTargets.Contains(TargetId);
+    public bool ShowQuality => !IsTool && (TargetId == BuiltInData.SameAsSource || LossyTargets.Contains(TargetId));
     public bool ShowTiff => TargetId is "tiff" or BuiltInData.SameAsSource;
     public bool ShowWebp => TargetId is "webp" or BuiltInData.SameAsSource;
     public bool ShowMultiPageTiff => TargetId is "tiff";
     public bool ShowIco => TargetId == "ico";
-    /// <summary>PDF options (also used when a PDF source becomes images) mean nothing for media, archive, font, subtitle, data, e-mail and 3D targets.</summary>
-    public bool ShowPdf => TargetCategory is not (FormatCategory.Video or FormatCategory.Audio or FormatCategory.Archive or FormatCategory.Font
-        or FormatCategory.Subtitle or FormatCategory.Data or FormatCategory.Model3D) && TargetId != "eml";
+    /// <summary>PDF options (also used when a PDF source becomes images) mean nothing for media, archive, font, subtitle, data, e-mail, 3D and geospatial targets.</summary>
+    public bool ShowPdf => !IsTool && TargetCategory is not (FormatCategory.Video or FormatCategory.Audio or FormatCategory.Archive or FormatCategory.Font
+        or FormatCategory.Subtitle or FormatCategory.Data or FormatCategory.Model3D or FormatCategory.Geo) && TargetId != "eml";
+    /// <summary>"Save as ZIP" is offered for geospatial targets, whose results are several files (a Shapefile) or travel zipped.</summary>
+    public bool ShowZipResult => TargetCategory == FormatCategory.Geo;
     public bool ShowPdfBuild => TargetId == "pdf";
     public bool ShowPdfSplit => TargetId == "pdf";
+
+    /// <summary>Compression is for PDF → PDF; Ghostscript and metadata only matter while it is on.</summary>
+    public bool ShowPdfCompression => TargetId == "pdf";
+    public bool ShowPdfCompressionOptions => ShowPdfCompression && CompressionLevel.Value != PdfCompression.None;
 
     /// <summary>PDF → a single-image format: the pages can be stacked into one tall image (TIFF, GIF, APNG and MNG keep pages).</summary>
     public bool ShowPdfCombine => TargetCategory == FormatCategory.Image
         && TargetId is not ("tiff" or "gif" or "apng" or "mng" or "ico" or "cur" or "icns" or "svg" or "pdf");
     public bool ShowDocument => TargetId == "pdf";
+    /// <summary>Markdown can't hold pictures: they go into a folder next to it, or are left out.</summary>
+    public bool ShowLeaveOutPictures => TargetId == "md";
     public bool ShowMedia => ShowMediaQuality || ShowMaxHeight || ShowRemoveAudio || ShowAudioChannels || ShowVideoCodec || ShowAudioCodec;
     /// <summary>Mono / stereo for every audio target but AMR, which is mono by definition.</summary>
     public bool ShowAudioChannels => TargetIsAudio && TargetId != "amr";
@@ -325,6 +432,8 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     public bool ShowWav => TargetId is "wav" or "w64";
     /// <summary>MP4, MKV, MOV and WebM can be written with HEVC or AV1 besides their usual codec.</summary>
     public bool ShowVideoCodec => TargetIsVideo && VideoCodecs.Count > 1;
+    /// <summary>Hardware encoding applies to H.264 and HEVC only (not VP9, AV1, MPEG-2, …).</summary>
+    public bool ShowHardwareEncoding => TargetIsVideo && MediaCodecs.TakesHardwareEncoding(TargetId, _videoCodecValue);
     /// <summary>M4A / M4B can hold Apple Lossless besides AAC.</summary>
     public bool ShowAudioCodec => AudioCodecs.Count > 1;
     public bool ShowMediaQuality => TargetIsLossyMedia;
@@ -335,6 +444,15 @@ public sealed partial class PresetEditorViewModel : ObservableObject
     public bool ShowArchiveOptions => ShowArchive && TargetId != FormatRegistry.Folder;
     /// <summary>"Extract" has nothing to set; a line says what it does instead.</summary>
     public bool ShowExtractNote => TargetId == FormatRegistry.Folder;
+    /// <summary>"Save every frame" of a video: PNG and JPG (format ids, <see cref="MediaOptions.FrameTargets"/>).</summary>
+    public bool ShowSaveEveryFrame => !IsTool && MediaOptions.FrameTargets.Contains(TargetId);
+    /// <summary>The video of a Live / Motion Photo: MP4 and MOV (<see cref="MediaOptions.MotionPhotoTargets"/>).</summary>
+    public bool ShowExtractMotionPhoto => !IsTool && MediaOptions.MotionPhotoTargets.Contains(TargetId);
+    /// <summary>
+    /// Playback speed: for the formats an animation stays animated in (an animated GIF, WebP, APNG or MNG, or a video
+    /// made into a GIF or APNG). Other targets get one frame.
+    /// </summary>
+    public bool ShowAnimationSpeed => TargetId is "gif" or "webp" or "apng" or "mng" or BuiltInData.SameAsSource;
     /// <summary>
     /// Tracing options: raster images reach SVG (and DXF / DWG through it) only by tracing. For other sources (a
     /// drawing, a CAD file) the options are ignored.
@@ -390,6 +508,8 @@ public sealed partial class PresetEditorViewModel : ObservableObject
             .ToList();
         if (image.IcoSizes.Count == 0)
             image.IcoSizes = [256, 48, 32, 16];
+        // Only where the option is shown: a speed chosen for GIF and left behind by a JPG target saves nothing.
+        image.AnimationSpeed = ShowAnimationSpeed ? AnimationSpeed.Value : 1;
 
         var pdf = _original.Pdf;
         pdf.MergeIntoSingle = Merge;
@@ -401,7 +521,11 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         pdf.CombinePages = CombinePages;
         pdf.TrimPageMargins = TrimPageMargins;
         pdf.SplitTallImage = SplitTallImage;
+        pdf.Compression = CompressionLevel.Value;
+        pdf.CompressWithGhostscript = CompressWithGhostscript;
         _original.Document.PdfA = PdfA;
+        // Only where the option is shown, as with SaveEveryFrame below.
+        _original.Document.LeaveOutPictures = ShowLeaveOutPictures && LeaveOutPictures;
 
         var media = _original.Media;
         media.Quality = MediaQuality.Value;
@@ -413,6 +537,11 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         media.WavFormat = WavFormat.Value;
         media.VideoCodec = MediaCodecs.Effective(TargetId, _videoCodecValue);
         media.AudioCodec = MediaCodecs.Effective(TargetId, _audioCodecValue);
+        media.HardwareEncoding = HardwareEncoding;
+        // Only where the option is shown: a box ticked for PNG and left behind by another target saves nothing.
+        media.SaveEveryFrame = ShowSaveEveryFrame && SaveEveryFrame;
+        media.FrameInterval = media.SaveEveryFrame ? Math.Clamp(FrameInterval, 1, 1000) : 1;
+        media.ExtractMotionPhoto = ShowExtractMotionPhoto && ExtractMotionPhoto;
         _original.Archive.Level = ArchiveLevel.Value;
         _original.Archive.CombineIntoOne = CombineIntoOne;
         _original.Trace.Mode = TraceMode.Value;
@@ -426,8 +555,13 @@ public sealed partial class PresetEditorViewModel : ObservableObject
         output.FileNamePattern = string.IsNullOrWhiteSpace(Pattern) ? "{name}" : Pattern.Trim();
         output.Conflict = Conflict.Value;
         output.KeepDates = KeepDates;
+        // Only for geospatial targets, where it is offered: a box ticked for Shapefile must not zip a later PNG.
+        output.ZipResult = ShowZipResult && ZipResult;
         return true;
     }
+
+    /// <summary>"0.25×", "1.5×", "2×": the same in every language.</summary>
+    private static string SpeedLabel(double speed) => speed.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "×";
 
     /// <summary>Fixed choices plus the preset's own value if it isn't one of them (e.g. edited by hand).</summary>
     private static List<Choice<int>> Steps(int[] steps, int current, Func<int, string> label) =>

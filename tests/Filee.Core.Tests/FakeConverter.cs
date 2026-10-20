@@ -17,6 +17,7 @@ internal sealed class FakeConverter(string id, params ConversionEdge[] edges) : 
     public bool Throw { get; set; }
 
     /// <summary>Mandarina: the exception to throw instead of the generic one (an engine that explains its failure).</summary>
+    /// <summary>Thrown instead of converting, when set.</summary>
     public Exception? Failure { get; set; }
 
     public EngineStatus GetStatus() => Available ? EngineStatus.Available() : EngineStatus.Unavailable("engine.reason.not_installed");
@@ -27,6 +28,8 @@ internal sealed class FakeConverter(string id, params ConversionEdge[] edges) : 
             throw Failure;
         if (Throw)
             throw new InvalidOperationException("boom");
+        if (Failure is not null)
+            throw Failure;
 
         var written = new List<string>();
         for (var i = 0; i < OutputsPerInput; i++)
@@ -78,12 +81,22 @@ internal sealed class FakeRecorder(string id, params ConversionEdge[] edges) : I
 
     public List<(string To, Filee.Core.Presets.ImageRotation Rotation)> Asked { get; } = [];
 
+    /// <summary>The steps it was asked for: (from, to, every frame).</summary>
+    public List<(string From, string To, bool FrameSequence)> Steps { get; } = [];
+
+    /// <summary>The animation speed each step was asked for: (to, speed).</summary>
+    public List<(string To, double Speed)> Speeds { get; } = [];
+
     public EngineStatus GetStatus() => EngineStatus.Available();
 
     public Task<IReadOnlyList<string>> ConvertAsync(ConversionStep step, IProgress<double>? progress, CancellationToken cancellationToken)
     {
         lock (Asked)
+        {
             Asked.Add((step.To, step.Preset.Image.Rotation));
+            Steps.Add((step.From, step.To, step.FrameSequence));
+            Speeds.Add((step.To, step.Preset.Image.AnimationSpeed));
+        }
         return _writer.ConvertAsync(step, progress, cancellationToken);
     }
 }

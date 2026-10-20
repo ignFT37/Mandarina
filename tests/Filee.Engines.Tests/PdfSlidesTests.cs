@@ -1,5 +1,3 @@
-// Mandarina: taken as it is from Filee's branch feature/pdf-to-pptx (commit e52db60, MIT), which is not in upstream/main yet.
-// When upstream merges it, `git merge upstream/main` should find the same text; keep upstream's version then.
 // PDF → PPTX with a picture of each page on its own slide: slide count and size, pictures fitted and centred, the page
 // range, the speaker notes, the Open XML SDK validator, Filee's own PPTX reader as a second reader, clear failures, and
 // routes: the picture deck is reached from a PDF only and is never a step towards another format.

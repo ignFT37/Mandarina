@@ -22,6 +22,7 @@
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://Filee/Styles/Soft.axaml" />
+    <StyleInclude Source="avares://Filee/Styles/Controls.axaml" />
     <StyleInclude Source="avares://Filee/Styles/TagEditor.axaml" />
   </Application.Styles>
 </Application>

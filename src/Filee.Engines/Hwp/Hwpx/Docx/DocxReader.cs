@@ -430,7 +430,7 @@ internal sealed partial class DocxReader
             _reader = reader;
             _props = props;
             _output = output;
-            _format = reader.ParaFormat(props);
+            _format = reader.ParaFormat(props, mark.Size);
             _mark = reader.CharFormat(mark);
             _heading = reader.HeadingLevel(props, pPr);
             _list = reader.Numbering(props.NumId) is { } numbering ? new HListRef(numbering, Math.Clamp(props.Ilvl ?? 0, 0, 8), Numbered: true) : null;
@@ -508,7 +508,7 @@ internal sealed partial class DocxReader
             if (element.Name.Namespace == M)
             {
                 if (name is "oMath" or "oMathPara")
-                    builder.Add(new HText(string.Concat(element.Descendants(M + "t").Select(t => t.Value)), CharFormat(styleRun) with { Italic = true }));
+                    Equations(element, builder, styleRun);
                 continue;
             }
             if (element.Name.Namespace != W)
@@ -638,7 +638,7 @@ internal sealed partial class DocxReader
             case "pict" or "object":
                 if (ShowsText())
                 {
-                    foreach (var inline in Vml(child))
+                    foreach (var inline in Vml(child, format))
                         builder.Add(inline);
                 }
                 break;
@@ -652,6 +652,41 @@ internal sealed partial class DocxReader
                 break;
             default:
                 break; // footnoteRef (the number, 한글 adds its own), separator, lastRenderedPageBreak, delText ...
+        }
+    }
+
+    /// <summary>
+    /// Word math (m:oMath, or m:oMathPara with one or more lines) as equations in the size of its runs. A display
+    /// equation alone in its paragraph is aligned like Word shows it (centred unless m:jc says otherwise).
+    /// </summary>
+    private void Equations(XElement math, ParagraphBuilder builder, RunProps styleRun)
+    {
+        var rPr = math.Descendants(M + "r").Select(r => r.Element(W + "rPr")).FirstOrDefault(p => p is not null);
+        var format = CharFormat(RunProperties(rPr, styleRun)) with { Italic = true };
+        var lines = math.Name.LocalName == "oMathPara" ? math.Elements(M + "oMath").ToList() : [math];
+
+        if (math.Name.LocalName == "oMathPara" && math.Parent is { } paragraph
+            && !paragraph.Descendants(W + "t").Any(t => t.Value.Trim().Length > 0 && !t.Ancestors(M + "oMathPara").Any()))
+        {
+            var align = Attr(math.Element(M + "oMathParaPr")?.Element(M + "jc"), "val", M) switch
+            {
+                "left" => HAlign.Left,
+                "right" => HAlign.Right,
+                _ => HAlign.Center,
+            };
+            builder.Current.Format = builder.Current.Format with { Align = align };
+        }
+
+        var first = true;
+        foreach (var line in lines)
+        {
+            var equation = OmmlReader.Read(line);
+            if (equation is MathRow { Items.Count: 0 })
+                continue;
+            if (!first)
+                builder.Add(new HLineBreak(format));
+            builder.Add(new HEquation(equation, format));
+            first = false;
         }
     }
 

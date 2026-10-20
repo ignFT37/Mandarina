@@ -50,8 +50,8 @@ internal static class TestServices
         {
             Avalonia.Controls.Window.WindowOpenedEvent.AddClassHandler<Filee.App.Views.MainWindow>((window, _) =>
             {
-                if (!MainWindows.Contains(window))
-                    MainWindows.Add(window);
+                if (!MainWindows.Any(w => w.TryGetTarget(out var known) && ReferenceEquals(known, window)))
+                    MainWindows.Add(new WeakReference<Filee.App.Views.MainWindow>(window));
             });
             _watchingWindows = true;
         }
@@ -71,7 +71,7 @@ internal static class TestServices
     }
 
     /// <summary>The main windows the tests opened and "closed" (which only hides them), until they are closed for good.</summary>
-    private static readonly List<Filee.App.Views.MainWindow> MainWindows = [];
+    private static readonly List<WeakReference<Filee.App.Views.MainWindow>> MainWindows = []; // weak: the app now releases a window that goes to the tray
 
     private const int CleanUpAfter = 3;
     private static bool _watchingWindows;
@@ -86,12 +86,17 @@ internal static class TestServices
     private static void CloseMainWindows()
     {
         var keep = AppHost.Get<WindowService>().Main;
-        foreach (var window in MainWindows.ToArray())
+        foreach (var reference in MainWindows.ToArray())
         {
+            if (!reference.TryGetTarget(out var window))
+            {
+                MainWindows.Remove(reference);
+                continue;
+            }
             if (window.IsVisible || ReferenceEquals(window, keep))
                 continue;
             window.CloseForGood();
-            MainWindows.Remove(window);
+            MainWindows.Remove(reference);
         }
         GC.Collect();
         GC.WaitForPendingFinalizers();

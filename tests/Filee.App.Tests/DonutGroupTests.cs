@@ -428,6 +428,25 @@ public class DonutGroupTests
     }
 
     [AvaloniaFact]
+    public void Tool_presets_are_available_only_for_writable_single_frame_raster_formats()
+    {
+        TestServices.EnsureInitialized("en");
+        var availability = AppHost.Get<PresetAvailability>();
+        var crop = BuiltInData.CreatePresets().Single(p => p.Id == "tool-crop");
+
+        Assert.Null(availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("png")]));
+        Assert.Null(availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("jpg")]));
+        Assert.Null(availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("webp")]));
+
+        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("pdf")]));
+        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("svg")]));
+        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("heic")]));
+
+        Assert.Equal("This file type isn't supported", availability.Check(crop, [Filee.Core.Formats.FormatRegistry.Get("png"), Filee.Core.Formats.FormatRegistry.Get("pdf")]));
+        Assert.Equal("This file type isn't supported", availability.Check(crop, []));
+    }
+
+    [AvaloniaFact]
     public void A_group_left_without_presets_says_why_on_the_donut()
     {
         TestServices.EnsureInitialized("en");

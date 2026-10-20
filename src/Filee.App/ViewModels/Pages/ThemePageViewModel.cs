@@ -51,7 +51,11 @@ public sealed partial class ThemePageViewModel : ObservableObject
     [ObservableProperty] private double _cornerRadius;
     [ObservableProperty] private bool _reduceMotion;
 
-    partial void OnModeChanged(Choice<ThemeMode> value) => Save(t => t.Mode = value.Value);
+    partial void OnModeChanged(Choice<ThemeMode>? oldValue, Choice<ThemeMode> newValue)
+    {
+        if (!Choices.Restore(oldValue, newValue, v => Mode = v))
+            Save(t => t.Mode = newValue.Value);
+    }
     partial void OnAccentChanged(Color value)
     {
         var hex = $"#{value.R:X2}{value.G:X2}{value.B:X2}";

@@ -51,7 +51,36 @@ public class RoutePlannerTests
         Assert.Equal(["pdf→svg"], planner.Plan("pdf", "svg")!.Steps.Select(s => $"{s.From}→{s.To}"));
     }
 
-    // Mandarina: from Filee's feature/pdf-to-pptx (e52db60).
+    // Mandarina: a first-step-only edge is for the file the user dropped, never for what an earlier step made of another file.
+    [Fact]
+    public void First_step_only_edges_are_never_used_after_another_step()
+    {
+        var office = new FakeConverter("office", new ConversionEdge("docx", "pdf", 1, FirstStepOnly: true), new ConversionEdge("docx", "doc", 1, FirstStepOnly: true));
+        var writer = new FakeConverter("writer", new ConversionEdge("xlsx", "docx"), new ConversionEdge("md", "docx"));
+        var planner = new RoutePlanner([office, writer]);
+
+        Assert.Equal(["docx→pdf"], planner.Plan("docx", "pdf")!.Steps.Select(s => $"{s.From}→{s.To}"));
+        Assert.Equal(["xlsx→docx"], planner.Plan("xlsx", "docx")!.Steps.Select(s => $"{s.From}→{s.To}"));
+        Assert.Null(planner.Plan("xlsx", "pdf")); // xlsx → docx → (Office) would use it as a second step
+        Assert.Null(planner.Plan("md", "doc"));
+    }
+
+    [Fact]
+    public void Unshaped_edges_are_left_out_for_text_that_needs_shaping()
+    {
+        // rhwp draws Arabic and Indic text unshaped: such a document goes through LibreOffice, though it costs more.
+        var writer = new FakeConverter("hwpx-writer", new ConversionEdge("docx", "hwpx"));
+        var rhwp = new FakeConverter("rhwp", new ConversionEdge("hwpx", "pdf", Unshaped: true));
+        var office = new FakeConverter("libreoffice", new ConversionEdge("docx", "pdf", 25));
+        var planner = new RoutePlanner([writer, rhwp, office]);
+
+        var usual = planner.Plan("docx", "pdf")!;
+        Assert.Equal(["hwpx-writer", "rhwp"], usual.Steps.Select(s => s.Converter.Id));
+        Assert.Equal([false, true], usual.Steps.Select(s => s.Unshaped));
+        Assert.Equal(["libreoffice"], planner.Plan("docx", "pdf", shaping: true)!.Steps.Select(s => s.Converter.Id));
+        Assert.Null(new RoutePlanner([writer, rhwp]).Plan("docx", "pdf", shaping: true));
+    }
+
     [Fact]
     public void Direct_only_edges_are_never_a_step_of_a_longer_route()
     {
@@ -68,18 +97,27 @@ public class RoutePlannerTests
         Assert.Equal(["pptx→odp"], planner.Plan("pptx", "odp")!.Steps.Select(s => $"{s.From}→{s.To}"));
     }
 
-    // Mandarina: a first-step-only edge is for the file the user dropped, never for what an earlier step made of another file.
     [Fact]
-    public void First_step_only_edges_are_never_used_after_another_step()
+    public void Frame_sequence_edges_are_a_route_of_their_own_only_when_asked_for()
     {
-        var office = new FakeConverter("office", new ConversionEdge("docx", "pdf", 1, FirstStepOnly: true), new ConversionEdge("docx", "doc", 1, FirstStepOnly: true));
-        var writer = new FakeConverter("writer", new ConversionEdge("xlsx", "docx"), new ConversionEdge("md", "docx"));
-        var planner = new RoutePlanner([office, writer]);
+        var ffmpeg = new FakeConverter("ffmpeg", new ConversionEdge("mp4", "png"),
+            new ConversionEdge("mp4", "png", FrameSequence: true), new ConversionEdge("mp4", "jpg", FrameSequence: true));
+        var magick = new FakeConverter("magick", new ConversionEdge("png", "jpg"), new ConversionEdge("png", "webp"));
+        var planner = new RoutePlanner([ffmpeg, magick]);
 
-        Assert.Equal(["docx→pdf"], planner.Plan("docx", "pdf")!.Steps.Select(s => $"{s.From}→{s.To}"));
-        Assert.Equal(["xlsx→docx"], planner.Plan("xlsx", "docx")!.Steps.Select(s => $"{s.From}→{s.To}"));
-        Assert.Null(planner.Plan("xlsx", "pdf")); // xlsx → docx → (Office) would use it as a second step
-        Assert.Null(planner.Plan("md", "doc"));
+        // Ordinary routes: one still frame, then the image engine. The frame edge to JPG is never taken.
+        var still = planner.Plan("mp4", "jpg")!;
+        Assert.Equal(["mp4→png", "png→jpg"], still.Steps.Select(s => $"{s.From}→{s.To}"));
+        Assert.DoesNotContain(still.Steps, s => s.FrameSequence);
+        Assert.False(planner.Plan("mp4", "png")!.Steps.Single().FrameSequence);
+
+        // Frames: the frame edge alone, never as a step towards another format.
+        var frames = planner.Plan("mp4", "jpg", frames: true)!;
+        Assert.Equal(("mp4", "jpg", true), (frames.Steps.Single().From, frames.Steps.Single().To, frames.Steps.Single().FrameSequence));
+        Assert.True(planner.Plan("mp4", "png", frames: true)!.Steps.Single().FrameSequence);
+        Assert.Null(planner.Plan("mp4", "webp", frames: true));
+        Assert.Null(planner.Plan("png", "jpg", frames: true));
+        Assert.False(planner.CanConvert("mov", "jpg", frames: true));
     }
 
     [Fact]

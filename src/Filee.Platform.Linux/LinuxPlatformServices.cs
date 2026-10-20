@@ -21,7 +21,30 @@ public sealed class LinuxPlatformServices : IPlatformServices
         string.Equals(Environment.GetEnvironmentVariable("XDG_SESSION_TYPE"), "wayland", StringComparison.OrdinalIgnoreCase)
         || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
 
-    public bool SupportsGlobalPointerGestures => X11WindowSystem.IsAvailable;
+    // Wayland gestures (experimental) are opt-in: FILEE_WAYLAND_GESTURES=1 on KDE Plasma. libuiohook's libinput backend
+    // reads /dev/input, so /dev/input is only probed once the switch is set, and it works once the user is in the
+    // `input` group. Presses carry no position and a mouse only moves relatively there; a KWin script places the donut.
+    private static readonly bool WaylandGestures = IsWaylandSession
+        && Environment.GetEnvironmentVariable("FILEE_WAYLAND_GESTURES") == "1"
+        && (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "").Split(':').Contains("KDE", StringComparer.OrdinalIgnoreCase)
+        && CanReadInputDevices();
+
+    private static bool CanReadInputDevices()
+    {
+        try
+        {
+            foreach (var device in Directory.EnumerateFiles("/dev/input", "event*"))
+            {
+                try { using var _ = File.OpenRead(device); return true; }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException) { }
+            }
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException) { }
+        return false;
+    }
+
+    public bool SupportsGlobalPointerGestures => X11WindowSystem.IsAvailable || WaylandGestures;
+    public bool PressCarriesPosition => !WaylandGestures;
     public bool SupportsSelectionShortcut => false;
     public string SelectionShortcutUnavailableReason =>
         "Linux file managers do not expose a shared selected-file API. Use the Filee context action or its Thunar shortcut.";
@@ -31,7 +54,10 @@ public sealed class LinuxPlatformServices : IPlatformServices
     public string ThunarShortcutRestartRequired =>
         "Close Thunar before changing its shortcut, then reopen it to load the Filee action and shortcut.";
 
-    public bool IsFileManagerAt(int x, int y) => ProcessNameAt(x, y) is { } name && FileManagers.Contains(name);
+    // Wayland can't say which window is under the cursor, so any Ctrl+drag may open the (invisible) donut window;
+    // it only shows when files are dragged in, and excluded apps can't be told apart there either.
+    public bool IsFileManagerAt(int x, int y) =>
+        WaylandGestures || ProcessNameAt(x, y) is { } name && FileManagers.Contains(name);
     public string? ProcessNameAt(int x, int y) => X11WindowSystem.ProcessNameAt(x, y);
 
     public IReadOnlyList<string> RunningAppNames() => IPlatformServices.AppNames(X11WindowSystem.ClientProcessNames());
@@ -76,6 +102,25 @@ public sealed class LinuxPlatformServices : IPlatformServices
     }
 
     public void RaiseTopmost(nint windowHandle) => X11WindowSystem.RaiseTopmost(windowHandle);
+
+    /// <summary>XDG_DOWNLOAD_DIR from user-dirs.dirs (a localized desktop calls it "다운로드"), else ~/Downloads.</summary>
+    public string DownloadsFolder
+    {
+        get
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var file = Path.Combine(XdgDirectory("XDG_CONFIG_HOME", ".config"), "user-dirs.dirs");
+            try
+            {
+                if (File.Exists(file) && XdgUserDirs.Download(File.ReadAllText(file), home) is { } configured)
+                    return configured;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+            return Path.Combine(home, "Downloads");
+        }
+    }
 
     private static string XdgDirectory(string variable, string fallback)
     {

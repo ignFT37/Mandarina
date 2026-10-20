@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Filee" />
     <InternalsVisibleTo Include="Filee.Engines.Tests" />
     <!-- Mandarina: the app tests build the Microsoft Office engine over a fake installation. -->
     <InternalsVisibleTo Include="Filee.App.Tests" />

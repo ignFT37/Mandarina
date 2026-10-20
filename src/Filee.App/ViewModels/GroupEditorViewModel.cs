@@ -30,7 +30,7 @@ public sealed partial class GroupEditorViewModel : ObservableObject
         _name = loc.DisplayName(group);
         foreach (var id in group.SubPresetIds)
         {
-            if (store.FindPreset(id) is { IsGroup: false } preset)
+            if (store.FindPreset(id) is { IsGroup: false, IsTool: false } preset)
                 Members.Add(MemberOf(preset));
         }
         Members.CollectionChanged += (_, _) => Refresh();
@@ -121,12 +121,15 @@ public sealed partial class GroupEditorViewModel : ObservableObject
         return true;
     }
 
-    /// <summary>Removes the group from the store and from every donut (its presets stay).</summary>
+    /// <summary>Removes the group from the store and from every donut, front and back (its presets stay).</summary>
     public void Delete()
     {
         _store.Presets.Remove(_group);
         foreach (var profile in _store.Profiles)
+        {
             profile.PresetIds.Remove(_group.Id);
+            profile.BackPresetIds?.Remove(_group.Id);
+        }
         Deleted = true;
     }
 
@@ -137,7 +140,7 @@ public sealed partial class GroupEditorViewModel : ObservableObject
     {
         var taken = Members.Select(m => m.PresetId).ToHashSet();
         Available.Clear();
-        foreach (var preset in _store.Presets.Where(p => !p.IsGroup && !taken.Contains(p.Id)))
+        foreach (var preset in _store.Presets.Where(p => !p.IsGroup && !p.IsTool && !taken.Contains(p.Id)))
             Available.Add(new Choice<string>(preset.Id, _loc.DisplayName(preset), CaptionOf(preset)));
         OnPropertyChanged(nameof(IsFull));
         OnPropertyChanged(nameof(IsEmpty));

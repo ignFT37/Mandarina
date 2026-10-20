@@ -29,6 +29,107 @@ public class JobQueueTests
     }
 
     [Fact]
+    public async Task Is_busy_from_enqueueing_until_the_job_has_finished()
+    {
+        // The app frees memory only while the queue is idle: a waiting or running job must count.
+        using var dir = new TempDir();
+        var gate = new TaskCompletionSource();
+        await using var queue = new JobQueue(new ConverterCatalog([new GatedConverter(gate.Task, new ConversionEdge("jpg", "png"))]));
+        var busyWhenFinished = new TaskCompletionSource<bool>();
+        queue.JobFinished += (_, _) => busyWhenFinished.TrySetResult(queue.IsBusy);
+        Assert.False(queue.IsBusy);
+
+        queue.Enqueue([dir.File("a.jpg")], new Preset { TargetFormat = "png" }, "Test");
+        Assert.True(queue.IsBusy);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        Assert.True(queue.IsBusy);
+
+        gate.SetResult();
+        Assert.True(await busyWhenFinished.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (queue.IsBusy && DateTime.UtcNow < deadline)
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        Assert.False(queue.IsBusy);
+    }
+
+    /// <summary>Converts like <see cref="FakeConverter"/> once the gate opens.</summary>
+    private sealed class GatedConverter(Task gate, params ConversionEdge[] edges) : IConverter
+    {
+        private readonly FakeConverter _inner = new("gated", edges);
+        public string Id => "gated";
+        public string DisplayName => "gated";
+        public IReadOnlyList<ConversionEdge> Edges => edges;
+        public int MaxParallelism => 0;
+        public EngineStatus GetStatus() => EngineStatus.Available();
+
+        public async Task<IReadOnlyList<string>> ConvertAsync(ConversionStep step, IProgress<double>? progress, CancellationToken cancellationToken)
+        {
+            await gate;
+            return await _inner.ConvertAsync(step, progress, cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task Text_that_needs_shaping_avoids_an_unshaped_engine_or_is_refused_without_another()
+    {
+        // Issues #185 and #202: Gujarati or Arabic DOCX → PDF through rhwp came out broken.
+        using var dir = new TempDir();
+        var arabic = dir.File("arabic.docx");
+        var english = dir.File("english.docx");
+        var writer = new FakeConverter("hwpx-writer", new ConversionEdge("docx", "hwpx"));
+        var rhwp = new ShapingCheck("rhwp", path => Path.GetFileName(path).StartsWith("arabic", StringComparison.Ordinal) ? "Arabic" : null,
+            new ConversionEdge("hwpx", "pdf", Unshaped: true));
+        var office = new FakeConverter("libreoffice", new ConversionEdge("docx", "pdf", 25));
+        var preset = new Preset { TargetFormat = "pdf" };
+
+        await using (var queue = new JobQueue(new ConverterCatalog([writer, rhwp, office])))
+        {
+            var job = await Run(queue, [arabic, english], preset);
+            Assert.Equal(JobState.Completed, job.State);
+            Assert.Equal(1, rhwp.Converted); // English only
+            Assert.Equal(["arabic.docx", "english.docx"], rhwp.Checked.Order().Select(Path.GetFileName));
+        }
+
+        office.Available = false;
+        await using (var queue = new JobQueue(new ConverterCatalog([writer, rhwp, office])))
+        {
+            var job = await Run(queue, [dir.File("arabic-2.docx")], preset);
+            var file = Assert.Single(job.Files);
+            Assert.Equal(FileState.Failed, file.State);
+            Assert.Equal("error.needs_shaping", file.ErrorKey);
+            Assert.Equal("Arabic", file.ErrorDetail);
+            Assert.False(File.Exists(Path.Combine(dir.Path, "arabic-2.pdf")));
+        }
+    }
+
+    /// <summary>An engine with unshaped edges that finds a script in the files <paramref name="script"/> names one for.</summary>
+    private sealed class ShapingCheck(string id, Func<string, string?> script, params ConversionEdge[] edges) : IConverter, ITextShapingCheck
+    {
+        private readonly FakeConverter _inner = new(id, edges);
+        public string Id => id;
+        public string DisplayName => id;
+        public IReadOnlyList<ConversionEdge> Edges => edges;
+        public int MaxParallelism => 0;
+        public List<string> Checked { get; } = [];
+        private int _converted;
+        public int Converted => _converted;
+        public EngineStatus GetStatus() => EngineStatus.Available();
+
+        public string? ScriptNeedingShaping(string sourcePath, string sourceFormat)
+        {
+            lock (Checked)
+                Checked.Add(sourcePath);
+            return script(sourcePath);
+        }
+
+        public Task<IReadOnlyList<string>> ConvertAsync(ConversionStep step, IProgress<double>? progress, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _converted);
+            return _inner.ConvertAsync(step, progress, cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task Rotate_needs_an_engine_that_turns_images_and_turns_once_on_a_longer_route()
     {
         using var dir = new TempDir();
@@ -75,6 +176,25 @@ public class JobQueueTests
     }
 
     [Fact]
+    public async Task Playback_speed_changes_only_in_the_step_that_writes_the_output()
+    {
+        // MP4 → GIF → WebP: both engines keep the animation, only the last one may change its speed (not 2 × 2 = 4×).
+        using var dir = new TempDir();
+        var video = dir.File("clip.mp4");
+        var ffmpeg = new FakeRecorder("ffmpeg", new ConversionEdge("mp4", "gif"));
+        var magick = new FakeRecorder("magick", new ConversionEdge("gif", "webp"));
+        await using var queue = new JobQueue(new ConverterCatalog([ffmpeg, magick]));
+        var preset = new Preset { TargetFormat = "webp", Image = { AnimationSpeed = 2 } };
+
+        var job = await Run(queue, [video], preset);
+
+        Assert.Equal(JobState.Completed, job.State);
+        Assert.Equal([("gif", 1.0)], ffmpeg.Speeds);
+        Assert.Equal([("webp", 2.0)], magick.Speeds);
+        Assert.Equal(2, preset.Image.AnimationSpeed); // the job's preset itself is left alone
+    }
+
+    [Fact]
     public async Task Keep_dates_gives_outputs_the_dates_of_their_source()
     {
         using var dir = new TempDir();
@@ -100,6 +220,54 @@ public class JobQueueTests
         Assert.Equal(modified, File.GetLastWriteTimeUtc(output));
         // Without the option the output has the time it was made.
         Assert.True(File.GetLastWriteTimeUtc(Path.Combine(dir.Path, "plain.png")) > DateTime.UtcNow.AddMinutes(-5));
+    }
+
+    [Fact]
+    public async Task Every_frame_is_saved_only_for_videos_and_the_frame_targets()
+    {
+        using var dir = new TempDir();
+        var video = dir.File("clip.mp4");
+        var photo = dir.File("photo.png");
+        var ffmpeg = new FakeRecorder("ffmpeg", new ConversionEdge("mp4", "png"),
+            new ConversionEdge("mp4", "png", FrameSequence: true), new ConversionEdge("mp4", "jpg", FrameSequence: true));
+        var magick = new FakeTurner("magick", new ConversionEdge("png", "jpg"), new ConversionEdge("png", "webp"));
+        await using var queue = new JobQueue(new ConverterCatalog([ffmpeg, magick]));
+
+        // Without "save every frame" a video → JPG is a still frame the image engine turns, as always.
+        var turned = await Run(queue, [video], new Preset { TargetFormat = "jpg", Image = { Rotation = ImageRotation.Left90 } });
+        Assert.Equal(JobState.Completed, turned.State);
+        Assert.Equal([("mp4", "png", false)], ffmpeg.Steps);
+        Assert.Equal([("jpg", ImageRotation.Left90)], magick.Asked);
+
+        // With it: one step that saves the frames.
+        ffmpeg.Steps.Clear();
+        var frames = await Run(queue, [video], new Preset { TargetFormat = "jpg", Media = { SaveEveryFrame = true } });
+        Assert.Equal(JobState.Completed, frames.State);
+        Assert.Equal([("mp4", "jpg", true)], ffmpeg.Steps);
+
+        // A target frames can't be (left over from an earlier PNG target) or a picture: converted as usual.
+        ffmpeg.Steps.Clear();
+        await Run(queue, [video], new Preset { TargetFormat = "webp", Media = { SaveEveryFrame = true } });
+        await Run(queue, [photo], new Preset { TargetFormat = "jpg", Media = { SaveEveryFrame = true } });
+        Assert.Equal([("mp4", "png", false)], ffmpeg.Steps);
+    }
+
+    [Fact]
+    public async Task A_refused_conversion_says_why_in_the_users_language()
+    {
+        using var dir = new TempDir();
+        var video = dir.File("long.mp4");
+        var ffmpeg = new FakeConverter("ffmpeg", new ConversionEdge("mp4", "png", FrameSequence: true))
+        {
+            Failure = new ConversionRefusedException("error.too_many_frames", "216,000 > 100,000"),
+        };
+        await using var queue = new JobQueue(new ConverterCatalog([ffmpeg]));
+
+        var job = await Run(queue, [video], new Preset { TargetFormat = "png", Media = { SaveEveryFrame = true } });
+
+        var file = job.Files.Single();
+        Assert.Equal(FileState.Failed, file.State);
+        Assert.Equal(("error.too_many_frames", "216,000 > 100,000"), (file.ErrorKey, file.ErrorDetail));
     }
 
     [Fact]
@@ -131,6 +299,71 @@ public class JobQueueTests
 
         Assert.Equal(JobState.CompletedWithErrors, job.State);
         Assert.Equal("error.unsupported_source", job.Files[1].ErrorKey);
+    }
+
+    [Fact]
+    public async Task An_empty_file_fails_as_empty_before_any_engine_sees_it()
+    {
+        // A DOCX made with "New" in Explorer is 0 bytes until Word saves it (#157).
+        using var dir = new TempDir();
+        var empty = dir.File("new.docx", "");
+        var ok = dir.File("a.jpg");
+        var converter = new FakeConverter("docx-writer", new ConversionEdge("docx", "pdf"), new ConversionEdge("jpg", "pdf"));
+        await using var queue = new JobQueue(new ConverterCatalog([converter]));
+
+        var job = await Run(queue, [empty, ok], new Preset { TargetFormat = "pdf" });
+
+        Assert.Equal(JobState.CompletedWithErrors, job.State);
+        Assert.Equal(FileState.Failed, job.Files[0].State);
+        Assert.Equal("error.empty_file", job.Files[0].ErrorKey);
+        Assert.Null(job.Files[0].ErrorDetail);
+        Assert.False(File.Exists(Path.Combine(dir.Path, "new.pdf")));
+        Assert.Equal(FileState.Done, job.Files[1].State);
+    }
+
+    [Fact]
+    public async Task An_empty_pdf_fails_as_empty_instead_of_breaking_the_merge()
+    {
+        using var dir = new TempDir();
+        var photo = dir.File("1.jpg");
+        var empty = dir.File("2.pdf", "");
+        var merger = new FakeMerger();
+        await using var queue = new JobQueue(new ConverterCatalog([new FakeConverter("pdfsharp", new ConversionEdge("jpg", "pdf"))]), merger);
+
+        var job = await Run(queue, [photo, empty], new Preset { TargetFormat = "pdf", Pdf = { MergeIntoSingle = true } });
+
+        Assert.Equal("error.empty_file", job.Files[1].ErrorKey);
+        Assert.Equal(["1.pdf"], merger.Inputs.Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task Combine_still_packs_empty_files_and_folders()
+    {
+        // Packing changes nothing: an empty file goes into the archive as it is.
+        using var dir = new TempDir();
+        var empty = dir.File("empty.txt", "");
+        var folder = Directory.CreateDirectory(Path.Combine(dir.Path, "folder")).FullName;
+        var combiner = new FakeCombiner();
+        await using var queue = new JobQueue(new ConverterCatalog([]), combiner: combiner);
+
+        var job = await Run(queue, [empty, folder], new Preset { TargetFormat = "zip", Archive = { CombineIntoOne = true } });
+
+        Assert.Equal(JobState.Completed, job.State);
+        Assert.Equal([empty, folder], combiner.Inputs);
+    }
+
+    [Fact]
+    public async Task A_folder_ending_in_a_separator_is_packed_next_to_itself()
+    {
+        // The command line keeps "Photos\" as typed: the archive is still Photos_files.zip beside the folder.
+        using var dir = new TempDir();
+        var folder = Directory.CreateDirectory(Path.Combine(dir.Path, "Photos")).FullName;
+        await using var queue = new JobQueue(new ConverterCatalog([]), combiner: new FakeCombiner());
+        var preset = new Preset { TargetFormat = "zip", Archive = { CombineIntoOne = true }, Output = { FileNamePattern = "{name}_files" } };
+
+        var job = await Run(queue, [folder + Path.DirectorySeparatorChar], preset);
+
+        Assert.Equal(Path.Combine(dir.Path, "Photos_files.zip"), job.Outputs.Single());
     }
 
     [Fact]

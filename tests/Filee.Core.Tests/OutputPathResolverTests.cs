@@ -50,6 +50,17 @@ public class OutputPathResolverTests
     }
 
     [Fact]
+    public void A_folder_ending_in_a_separator_is_named_and_placed_like_the_folder()
+    {
+        using var dir = new TempDir();
+        var folder = Directory.CreateDirectory(Path.Combine(dir.Path, "Photos")).FullName;
+
+        var path = OutputPathResolver.Resolve(new OutputRule(), Tokens(folder + Path.DirectorySeparatorChar), "zip", File.Exists);
+
+        Assert.Equal(Path.Combine(dir.Path, "Photos.zip"), path);
+    }
+
+    [Fact]
     public void Existing_file_gets_a_number_by_default()
     {
         using var dir = new TempDir();

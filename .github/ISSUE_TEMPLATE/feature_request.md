@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: A new format, preset option or idea
+about: A preset option, engine or idea (a file type Filee can't open goes in "Format request")
 labels: enhancement
 ---
 

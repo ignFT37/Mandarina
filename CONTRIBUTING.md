@@ -19,6 +19,11 @@ Filee's own engines and converters are best sent upstream as well. Every change 
    COM, and only when the user has Office installed and the switch in Settings > Engines is on.
 4. `dotnet run --project src/Filee.App`, `dotnet test`.
 
+To try a build next to the Filee you use every day (testing, measuring memory), set `FILEE_DATA_DIR` to an empty
+folder first. Settings, logs and downloaded engines then live there, the copy is its own single instance (later
+launches with the same variable, `--quit` included, reach it and never your installed Filee), and it registers no
+startup entry, context menu or Explorer menu.
+
 Any IDE works (Visual Studio 2022+, Rider, VS Code with C# Dev Kit).
 
 ## Linux and macOS development
@@ -39,11 +44,19 @@ install/uninstall scripts. `Filee-<version>-<rid>-SHA256SUMS.txt` verifies the a
 `com.filee.app` and a development ad-hoc signature by default; public distribution still needs Developer ID signing
 and notarization. `-SigningIdentity` can supply a signing identity, but does not perform notarization.
 
+Linux release packages must run on Ubuntu 22.04 (glibc 2.35). CI builds rhwp from source on Ubuntu 22.04
+(`build/build-linux-native.py`) and passes it with `-RhwpOverride`; a local package without it needs the glibc of the
+machine that built it. Check a package with
+`python3 build/check-elf-glibc.py --max 2.35 <unpacked package>`. See [docs/ENGINES.md](docs/ENGINES.md#linux-builds-for-older-glibc).
+
 - **Linux:** drag gestures require X11. Install the Avalonia desktop dependencies (fontconfig, FreeType, X11,
-  Xrandr, Xi, Xtst, XkbCommon, ICE and SM) and CJK fonts for document comparisons. File actions are installed for
+  Xrandr, Xi, Xtst, Xt, XkbCommon, ICE and SM) and CJK fonts for document comparisons. File actions are installed for
   Thunar, Nautilus, Nemo and Dolphin. The first enabled keyboard shortcut uses Thunar's native custom action;
   close Thunar before changing or pausing that shortcut and reopen it afterwards. Global selected-file queries
   and hold gestures are not supported. Wayland can use file actions, the drop zone, watch folders and CLI.
+  On KDE Plasma 6 the drag gesture can also run there, experimentally and only with `FILEE_WAYLAND_GESTURES=1`. It needs
+  the user in the `input` group (libuiohook's libinput back end) and the KWin script in `installer/linux/kwin`, which
+  moves the donut window (titled "Filee Donut") to the cursor. See `installer/linux/INSTALL.txt`.
 - **macOS:** grant Filee Accessibility permission for gestures and Finder Automation permission for selection.
   Keep the development `.app` at a stable path while testing these permissions. Finder integration is a Quick
   Action under Services; auto-start uses a per-user LaunchAgent.

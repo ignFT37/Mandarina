@@ -86,7 +86,14 @@
   suite se volvía cuadrática. Libera también los `CaptureRenderedFrame()` (memoria nativa) y cierra tus ventanas.
 
 ## Trampas conocidas
-- Mandarina no se autoactualiza: las comprobaciones de Filee miran sus versiones y reemplazarían el fork.
+- Mandarina no se autoactualiza: las comprobaciones de Filee miran sus versiones y reemplazarían el fork. Tampoco enseña las diapositivas
+  «Novedades» de Filee (`WhatsNewService` no se llama al arrancar y el enlace de «Acerca de» está oculto).
+- Idiomas: solo en, es, ko y zh-CN (`AppLanguages`). Los archivos ja, pl, hi y ru de Filee se quedan en `Assets/i18n` sin usarse: no tienen
+  los textos de Mandarina. Cada texto nuevo de Filee que diga «Filee» para la propia app se renombra al traer cambios
+  (`MandarinaBrandingTests` lo vigila).
+- Al fusionar Filee: Windows nunca debe cargar `Filee.Platform.MacOS.dll` ni `Filee.Platform.Linux.dll` (Smart App Control); todo uso de
+  esos tipos va por `PlatformLayers`. La rueda de convertir conserva la cara trasera de Filee (Tab o la rueda del ratón); las de
+  herramientas y acciones no tienen.
 - Un `dotnet test` interrumpido deja procesos `Filee.App.Tests` y `testhost` que bloquean la compilación siguiente: ciérralos.
 - FFmpeg 9 ya no tiene `-filter_complex_script`: se usa `-/filter_complex <archivo>`.
 - Whisper por Vulkan: una tarjeta integrada puede devolver texto basura y es mucho más lenta; el motor elige la tarjeta con memoria

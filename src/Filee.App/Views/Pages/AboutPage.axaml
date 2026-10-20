@@ -20,6 +20,13 @@
               <TextBlock Text="{Binding RepositoryUrl}" Foreground="{DynamicResource AccentBrush}" />
             </StackPanel>
           </Button>
+          <!-- This version's "What's new" slides again -->
+          <Button x:Name="WhatsNewLink" Classes="ghost" Padding="0" Command="{Binding ShowWhatsNewCommand}" IsVisible="{Binding HasWhatsNew}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Info}" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{Binding WhatsNewText}" Foreground="{DynamicResource AccentBrush}" />
+            </StackPanel>
+          </Button>
         </StackPanel>
       </StackPanel>
     </Border>

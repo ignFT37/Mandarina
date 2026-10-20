@@ -24,7 +24,11 @@ public static class OutputPathResolver
     public static string? Resolve(OutputRule rule, Tokens tokens, string targetExtension,
         Func<string, bool> exists, string? suffix = null)
     {
-        var sourceDir = Path.GetDirectoryName(Path.GetFullPath(tokens.SourcePath)) ?? "";
+        // A folder given as "Photos\" (the command line keeps what was typed) is named and placed like "Photos".
+        tokens = tokens with { SourcePath = Path.TrimEndingDirectorySeparator(tokens.SourcePath) };
+        var sourceDir = string.IsNullOrWhiteSpace(rule.SourceFolder)
+            ? Path.GetDirectoryName(Path.GetFullPath(tokens.SourcePath)) ?? ""
+            : Path.GetFullPath(rule.SourceFolder);
         var dir = rule.Location switch
         {
             OutputLocation.Subfolder => Path.Combine(sourceDir, Sanitize(ExpandPattern(rule.SubfolderName, tokens), "converted")),

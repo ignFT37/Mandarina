@@ -83,17 +83,21 @@ public sealed partial class HomePageViewModel : ObservableObject, IDisposable
     private readonly IPlatformServices _platform;
     private readonly Services.Triggers.TriggerService? _triggers;
     private readonly ConversionService? _conversions;
+    private readonly ElevationService? _elevation;
 
     public HomePageViewModel(UserDataStore store, ILocalizer loc, IPlatformServices platform, Services.Triggers.TriggerService? triggers = null,
-        ConversionService? conversions = null)
+        ConversionService? conversions = null, ElevationService? elevation = null)
     {
         _store = store;
         _loc = loc;
         _platform = platform;
         _triggers = triggers;
         _conversions = conversions;
+        _elevation = elevation;
         if (triggers is not null)
             triggers.StatusChanged += OnTriggerStatusChanged;
+        if (elevation is not null)
+            elevation.PropertyChanged += OnElevationChanged;
         var drag = store.Settings.Triggers.FirstOrDefault(t => t.Enabled && t.Kind == TriggerKind.Drag);
         DropHint = loc.Format(OperatingSystem.IsMacOS() ? "home.drop_hint_macos" : OperatingSystem.IsLinux() ? "home.drop_hint_linux" : "home.drop_hint", drag is null ? "—" : GestureText.Modifiers(drag.Modifiers));
         store.HistoryChanged += OnHistoryChanged;
@@ -107,9 +111,26 @@ public sealed partial class HomePageViewModel : ObservableObject, IDisposable
         _store.HistoryChanged -= OnHistoryChanged;
         if (_triggers is not null)
             _triggers.StatusChanged -= OnTriggerStatusChanged;
+        if (_elevation is not null)
+            _elevation.PropertyChanged -= OnElevationChanged;
     }
 
     private void OnTriggerStatusChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(NeedsAccessibility));
+
+    private void OnElevationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) =>
+        OnPropertyChanged(nameof(ElevationRestartFailed));
+
+    /// <summary>
+    /// Windows: Filee runs as administrator while Explorer doesn't, so drops, the Explorer menu and the shortcut can't
+    /// reach it (the warning above the drop zone).
+    /// </summary>
+    public bool IsElevated => _elevation?.ShellCannotReachFilee == true;
+
+    /// <summary>The restart button didn't work: the warning says what to do instead.</summary>
+    public bool ElevationRestartFailed => _elevation?.RestartFailed == true;
+
+    [RelayCommand]
+    private void RestartWithoutAdministratorRights() => _elevation?.RestartWithoutAdministratorRights();
 
     /// <summary>macOS: gestures wait for the Accessibility permission (the reminder above the drop zone).</summary>
     public bool NeedsAccessibility => _triggers?.NeedsPermission == true;
@@ -122,21 +143,52 @@ public sealed partial class HomePageViewModel : ObservableObject, IDisposable
 
     public string DropHint { get; }
 
+    /// <summary>How many conversions the page lists: the newest, or the newest that match the search.</summary>
+    internal const int Shown = 40;
+
+    /// <summary>The conversions listed (each looks for its outputs on disk, so only <see cref="Shown"/> of them).</summary>
     public ObservableCollection<HistoryItemViewModel> History { get; } = [];
 
+    /// <summary>
+    /// What was typed in the search box: the list shows the conversions whose preset or a source file name contains
+    /// it, from the whole history (<see cref="AppSettings.HistoryLimit"/>), not just the ones listed without it.
+    /// </summary>
+    [ObservableProperty] private string _search = "";
+
+    partial void OnSearchChanged(string value) => Reload();
+
+    /// <summary>No history at all: no search box, and the hint that converted files show up here.</summary>
     [ObservableProperty] private bool _isEmpty;
+
+    /// <summary>A search that matches nothing.</summary>
+    [ObservableProperty] private bool _noMatches;
 
     private void Reload()
     {
+        var query = Search.Trim();
+        // The entries are picked first, then built: building one looks for its outputs on disk.
+        var entries = _store.History
+            .Where(entry => query.Length == 0 || Matches(entry, query))
+            .Take(Shown)
+            .ToList();
         History.Clear();
-        foreach (var entry in _store.History.Take(40))
+        foreach (var entry in entries)
             History.Add(new HistoryItemViewModel(entry, _loc, _platform, _conversions));
-        IsEmpty = History.Count == 0;
+        IsEmpty = _store.History.Count == 0;
+        NoMatches = !IsEmpty && History.Count == 0;
+    }
+
+    private static bool Matches(HistoryEntry entry, string query)
+    {
+        return Contains(entry.PresetName) || entry.Sources.Any(source => Contains(Path.GetFileName(source)));
+
+        bool Contains(string? text) => text?.Contains(query, StringComparison.CurrentCultureIgnoreCase) == true;
     }
 
     [RelayCommand]
     private void ClearHistory()
     {
+        Search = "";
         _store.ClearHistory();
         Reload();
     }

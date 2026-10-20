@@ -53,10 +53,26 @@ public sealed class SystemIntegrationTests
         Assert.Equal(0, platform.MenuCalls);
     }
 
+    [Fact]
+    public void A_copy_with_its_own_data_folder_does_not_register_os_integration()
+    {
+        var platform = new RecordingPlatform();
+        var service = new SystemIntegrationService(platform, new Texts(), NullLogger<SystemIntegrationService>.Instance)
+        {
+            RegistrationEnabled = true,
+            SeparateDataDirectory = true,
+            ExecutablePath = Path.Combine(Path.GetTempPath(), "Filee test", "Filee"),
+        };
+        service.Apply(new AppSettings { StartWithSystem = true, ContextMenuEnabled = true });
+        Assert.Equal(0, platform.StartupCalls);
+        Assert.Equal(0, platform.MenuCalls);
+    }
+
     private static SystemIntegrationService Create(RecordingPlatform platform) =>
         new(platform, new Texts(), NullLogger<SystemIntegrationService>.Instance)
         {
             RegistrationEnabled = true,
+            SeparateDataDirectory = false,
             ExecutablePath = Path.Combine(Path.GetTempPath(), "Filee test", "Filee"),
         };
 

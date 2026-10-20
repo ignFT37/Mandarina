@@ -1,5 +1,3 @@
-// Mandarina: taken as it is from Filee's branch feature/pdf-to-pptx (commit e52db60, MIT), which is not in upstream/main yet.
-// When upstream merges it, `git merge upstream/main` should find the same text; keep upstream's version then.
 // PDF → PPTX: one slide per page showing the page as a picture, so the slides look exactly like the PDF (they are not
 // editable). Pages are rendered with PDFium (via PDFtoImage) at the preset's resolution and written by
 // PictureDeckWriter; the text of each page (PdfPig, reading order, like PDF → TXT) goes into the slide's speaker notes,
