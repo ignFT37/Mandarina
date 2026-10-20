@@ -40,6 +40,8 @@ if (-not (Test-Path (Join-Path $work 'Filee.exe'))) { throw "No published build 
 $exe = Join-Path $work 'Mandarina.exe'
 if (Test-Path $exe) { Remove-Item $exe -Force }
 Move-Item (Join-Path $work 'Filee.exe') $exe
+# Debug symbols are 27 of the 141 MB (libSkiaSharp.pdb alone 21) and carry the builder's folder names.
+Get-ChildItem $work -Filter *.pdb -Recurse | Remove-Item -Force
 foreach ($file in 'LICENSE', 'THIRD-PARTY-NOTICES.md') {
     Copy-Item (Join-Path $repo $file) (Join-Path $work $file) -Force
 }
