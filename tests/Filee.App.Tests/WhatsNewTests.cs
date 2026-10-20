@@ -382,7 +382,7 @@ public class WhatsNewTests
         Assert.False(media.HasPicture);
     }
 
-    [AvaloniaFact]
+    [AvaloniaFact(Skip = "Mandarina: no \"What's new\" slides (they are Filee's); the About link is hidden")]
     public void About_offers_the_slides_again()
     {
         TestServices.EnsureInitialized("en");

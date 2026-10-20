@@ -27,10 +27,8 @@ public class LocalizationResourceTests
 
         TestServices.EnsureInitialized("ko");
         Assert.Equal("홈", text.Text);
-        TestServices.EnsureInitialized("ja");
-        Assert.Equal("ホーム", text.Text);
-        Assert.Equal("オン", toggle.OnContent);
-        Assert.Equal("オフ", toggle.OffContent);
+        TestServices.EnsureInitialized("es"); // Mandarina: Filee's "ja" is not offered
+        Assert.Equal("Inicio", text.Text);
         window.Close();
     }
 }

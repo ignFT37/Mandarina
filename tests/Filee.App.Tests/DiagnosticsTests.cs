@@ -92,7 +92,7 @@ public class UiWatchdogTests
         RunUi();
         Assert.Equal(2, _log.Lines.Count);
         Assert.Equal(LogLevel.Information, _log.Lines[1].Level);
-        Assert.Equal($"UI thread responsive again after {12.5:0.0} s", _log.Lines[1].Message);
+        Assert.Equal($"UI thread responsive again after {12.5.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} s", _log.Lines[1].Message);
     }
 
     [Fact]

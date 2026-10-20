@@ -45,7 +45,7 @@ public class WhatsNewMedia
     {
         get
         {
-            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            var dir = new DirectoryInfo(TestPaths.Start); // Mandarina: build output lives outside the checkout
             while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Filee.slnx")))
                 dir = dir.Parent;
             return dir!.FullName;

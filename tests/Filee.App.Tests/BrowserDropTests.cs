@@ -251,7 +251,7 @@ public class BrowserDropTests
             var angle = degrees * Math.PI / 180;
             var p = new Point(center.X + radius * Math.Cos(angle), center.Y + radius * Math.Sin(angle));
             var hit = donut.HitTest(p);
-            if (hit.Kind == DonutHitKind.Segment && model.PresetAt(hit.Index, -1) is { } preset && donut.Converts(hit))
+            if (hit.Kind == DonutHitKind.Segment && model.PresetAt(hit.Index, -1) is { } preset && preset.Id != "to-heic" /* Mandarina: FFmpeg encodes HEIC, which needs an encoder this PC may lack */ && donut.Converts(hit))
                 return (p, preset.Id);
         }
         throw new InvalidOperationException("No slice converts a PNG.");

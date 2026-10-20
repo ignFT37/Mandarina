@@ -777,7 +777,7 @@ public class RenderTests
             var vm = AppHost.Get<RadialViewModel>();
             vm.Load([@"C:\gis\roads.shp", @"C:\gis\parcels.shp"], clickMode: true);
             vm.FitToThisDonut();
-            Assert.Equal(["to-geojson", "to-shp", "to-kml", "to-csv", "to-gpx", "to-kmz"], vm.Presets.Select(p => p.Id));
+            Assert.Equal(["to-geojson", "to-kml", "to-csv", "to-gpx", "to-kmz"], vm.Presets.Select(p => p.Id)); // Mandarina: not the files' own format
             Assert.All(vm.Items, item => Assert.True(item.IsEnabled));
             var window = new RadialWindow { DataContext = vm };
             window.Show();

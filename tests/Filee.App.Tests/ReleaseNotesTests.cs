@@ -42,12 +42,12 @@ public class ReleaseNotesTests
         var note = ReleaseNotes.Parse("1.12.0", """
             <!-- update
             en: Polish translation
-            pl: Język polski
+            es: Traducción al español
             xx: from a newer Filee
             -->
             """);
 
-        Assert.Equal(["Język polski"], note.In("pl"));
+        Assert.Equal(["Traducción al español"], note.In("es")); // Mandarina: es, not Filee's pl
         Assert.Equal(["Polish translation"], note.In("xx")); // not a Filee language: English
     }
 
