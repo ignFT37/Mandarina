@@ -204,6 +204,8 @@ public sealed class WindowsPlatformServices : IPlatformServices
         if (ExplorerMenuRegistration.IsSupportedOs)
             ExplorerMenuRegistration.SetTitle(enabled ? label : null);
 
+        RemoveLegacySendToShortcut(Environment.GetFolderPath(Environment.SpecialFolder.SendTo), executablePath, Environment.ProcessPath);
+
         if (!enabled)
         {
             RemoveClassicVerb();
@@ -286,7 +288,21 @@ public sealed class WindowsPlatformServices : IPlatformServices
     }
 
     private static string SendToShortcutPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.SendTo), "Filee.lnk");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.SendTo), "Mandarina.lnk");
+
+    /// <summary>
+    /// Mandarina: the Send To shortcut was called Filee.lnk before it had its own name. It is deleted only when it points at one
+    /// of <paramref name="programs"/> (this program), so a Filee installed next to Mandarina keeps its own.
+    /// </summary>
+    internal static void RemoveLegacySendToShortcut(string sendToFolder, params string?[] programs)
+    {
+        var legacy = Path.Combine(sendToFolder, "Filee.lnk");
+        if (!File.Exists(legacy) || ShellLinks.TargetOf(legacy) is not { } target)
+            return;
+        if (programs.Any(p => !string.IsNullOrEmpty(p)
+                              && string.Equals(Path.GetFullPath(p), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase)))
+            TryDelete(legacy);
+    }
 
     private static nint RootWindowAt(int x, int y)
     {

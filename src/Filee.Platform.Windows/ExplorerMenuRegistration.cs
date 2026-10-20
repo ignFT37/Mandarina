@@ -139,7 +139,9 @@ public static class ExplorerMenuRegistration
     /// </summary>
     public static async Task<ModernContextMenuResult> RemoveAsync(bool allowElevation)
     {
-        if (Find() is null)
+        // Mandarina: the package is named after Filee, and Mandarina does not ship it. Whoever installed Filee next to
+        // Mandarina owns it, so it is removed only when it points at this program's own folder.
+        if (Find() is not { } registered || !IsOwnedBy(registered, AppContext.BaseDirectory))
             return new ModernContextMenuResult(true);
         var result = await RunPowerShellAsync(BuildRemoveScript, elevated: false);
         if (!result.Succeeded && allowElevation && Find() is not null)
@@ -309,6 +311,10 @@ public static class ExplorerMenuRegistration
                 : null;
         }
     }
+
+    /// <summary>Mandarina: true when <paramref name="package"/> was registered for the program installed in <paramref name="programFolder"/>.</summary>
+    internal static bool IsOwnedBy(RegisteredPackage package, string programFolder) =>
+        package.ExternalLocation is { } location && SamePath(location, programFolder);
 
     private static bool SamePath(string a, string b) =>
         string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(b)),
