@@ -13,7 +13,7 @@ namespace Filee.App.Mandarina.Tools;
 public class TranscribePanel(PanelContext context) : TranscribePanelBase(context)
 {
     // Tall enough for the long line about the model (two lines) under a two-line "what it is doing" in the longest languages.
-    public override Size PreferredSize => new(520, 360);
+    public override Size PreferredSize => new(520, 392);
 
     public override bool AutoRun => true;
 

@@ -47,6 +47,12 @@
     Las crea `.github/workflows/release.yml` al empujar una etiqueta `vX.Y.Z` (la versión sale de la etiqueta; la de
     `Directory.Build.props` es la de los builds locales y la que enseña «Acerca de»). Nunca instales/desinstales el instalador en
     este PC para probarlo: su desinstalador borra el inicio con Windows, el menú contextual y los motores descargados reales.
+  - Firma de código (SignPath Foundation): el README, `README.es.md` y las notas de `release.yml` llevan la «Code signing policy»
+    (`MandarinaSigningTests` la vigila, y que todos los .exe/.dll propios digan «Mandarina» en FileDescription y ProductName y tengan
+    la misma ProductVersion). El instalador pregunta, con casillas marcadas, si arrancar con Windows y si añadir «Convertir con
+    Mandarina» al menú contextual y a «Enviar a»; lo apunta en `setup-options.json` (junto al programa) y el primer arranque lo
+    aplica y lo borra (`InstallerChoices.cs`). Cuando SignPath apruebe, se cambia la línea de estado del README (hay un comentario
+    HTML con la frase de atribución).
 - Los textos de la interfaz están en `src/Filee.App/Assets/i18n/*.json`. Cada clave nueva va en todos los idiomas
   (en, es, ko, zh-CN); un test lo comprueba. `python tools/mandarina/i18n_tool.py add . spec.json` añade claves a los cuatro.
   Textos propios: no copies frases de otros productos.

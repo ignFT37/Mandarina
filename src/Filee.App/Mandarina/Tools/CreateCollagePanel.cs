@@ -184,7 +184,7 @@ public sealed partial class CreateCollagePanel : ToolPanel
         _ = LoadAsync();
     }
 
-    public override Size PreferredSize => new(940, 624);
+    public override Size PreferredSize => new(940, 660);
 
     /// <summary>The photos in collage order (the first is the large one of the featured layout, the top left cell otherwise).</summary>
     public ObservableCollection<CollageItem> Items { get; } = [];

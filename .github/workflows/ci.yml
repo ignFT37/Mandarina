@@ -58,10 +58,11 @@ jobs:
           key: zig-0.16.0-x86_64-windows
 
       # rhwp, Pandoc and 7-Zip are small; with them the HWP/HWPX and archive engine tests run too (LibreOffice is
-      # skipped to save time).
-      - name: Fetch rhwp, Pandoc and 7-Zip for engine tests
+      # skipped to save time). FFmpeg is for Mandarina's audio, video and panel tests, which would otherwise be skipped or
+      # find a greyed-out wheel; Whisper's models are not fetched, so the tests that need real speech are skipped.
+      - name: Fetch rhwp, Pandoc, 7-Zip and FFmpeg for engine tests
         shell: pwsh
-        run: ./build/fetch-engines.ps1 -Only rhwp,pandoc,7zip
+        run: ./build/fetch-engines.ps1 -Only rhwp,pandoc,7zip,ffmpeg
 
       # The UI tests on their own first, as the release runs them (there they crashed with 0xC0000005): a crash
       # names the test that was running and leaves a dump in TestResults.

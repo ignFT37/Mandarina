@@ -115,7 +115,7 @@ public sealed partial class FrameImagePanel : ToolPanel
         _ = LoadAsync();
     }
 
-    public override Size PreferredSize => new(900, 596);
+    public override Size PreferredSize => new(900, 608);
 
     public bool IsColor => Background == FrameBackground.Color;
 

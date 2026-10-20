@@ -93,7 +93,7 @@ public sealed partial class DonutMenu
                             context.DrawGeometry(Orange, OrangeStroke, petal);
                     }
                     var hot = (i == ActiveIndex || i == _dropTargetIndex) && item.IsEnabled;
-                    DrawGlassLabel(context, item, DonutGeometry.PointAt(center, (r1 + r2) / 2, mid), span * (r1 + r2) / 2 - 8, hot, bold);
+                    DrawGlassLabel(context, item, DonutGeometry.PointAt(center, (r1 + r2) / 2, mid), GlassPetalWidth(n, r1, r2), hot, bold);
                 }
             }
         }
@@ -121,16 +121,8 @@ public sealed partial class DonutMenu
             var matrix = Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(at.X - size / 2, at.Y - 16.5);
             using (context.PushTransform(matrix))
                 context.DrawGeometry(null, new Pen(ink, 2, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), icon);
-            var room = Math.Clamp(maxWidth, 40, 90);
-            var titleSize = 9.0;
-            if (!item.Label.Contains(' '))
-            {
-                // A single word wider than its petal (nine petals on a video's wheel: "ENCUADRAR"; eleven with the transcription
-                // ones: "TRANSCRIBIR"): a little smaller type, not the word broken in two.
-                var natural = MakeText(item.Label, bold, titleSize, ink, 1000).Width;
-                if (natural > room)
-                    titleSize = Math.Max(6.2, titleSize * room / natural);
-            }
+            var room = GlassTitleRoom(maxWidth);
+            var titleSize = GlassTitleSize(item.Label, bold, room);
             var title = MakeText(item.Label, bold, titleSize, ink, room, maxLines: 2);
             DrawCentered(context, title, at.X, at.Y + 5);
             return;
@@ -138,6 +130,40 @@ public sealed partial class DonutMenu
         var label = MakeText(item.Label, bold, 14, ink, Math.Clamp(maxWidth, 30, 110), maxLines: 2);
         DrawCentered(context, label, at.X, at.Y - label.Height / 2);
     }
+
+    /// <summary>
+    /// The type size of an icon petal's title: 9 pt, or smaller when its longest word is wider than <paramref name="room"/> (nine petals on a
+    /// video's wheel: "ENCUADRAR"; eleven with the transcription ones: "TRANSCRIBIR"; a two-word title whose longer word does not fit has
+    /// the same problem). A word never breaks in two ("RECORTA/R"): the type shrinks until it fits, down to <see cref="GlassTitleMinimum"/>.
+    /// </summary>
+    internal static double GlassTitleSize(string label, Typeface bold, double room)
+    {
+        const double normal = 9.0;
+        var fits = room - 1; // text measures a little differently from how it is laid out (hinting): keep a pixel of margin
+        if (label.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length == 0)
+            return normal;
+        double Widest(double size) => WidestWord(label, bold, size);
+        var natural = Widest(normal);
+        if (natural <= fits)
+            return normal;
+        var titleSize = Math.Max(GlassTitleMinimum, normal * fits / natural);
+        while (titleSize > GlassTitleMinimum && Widest(titleSize) > fits)
+            titleSize = Math.Max(GlassTitleMinimum, titleSize * 0.97);
+        return titleSize;
+    }
+
+    /// <summary>The width of the longest word of <paramref name="label"/> at <paramref name="size"/>.</summary>
+    internal static double WidestWord(string label, Typeface bold, double size) =>
+        label.Split(' ', StringSplitOptions.RemoveEmptyEntries).Max(word => MakeText(word, bold, size, Brushes.Black, 1000).Width);
+
+    /// <summary>How wide a title may be on one of <paramref name="count"/> petals of a ring from <paramref name="r1"/> to <paramref name="r2"/>.</summary>
+    internal static double GlassPetalWidth(int count, double r1, double r2) => DonutGeometry.Span(count) * (r1 + r2) / 2 - 8;
+
+    /// <summary>The line width of an icon petal's title: the petal's, but never narrower than 40 (a small ring) nor wider than 90.</summary>
+    internal static double GlassTitleRoom(double petalWidth) => Math.Clamp(petalWidth, 40, 90);
+
+    /// <summary>The smallest title size on a petal; below it the text would not be legible.</summary>
+    internal const double GlassTitleMinimum = 6.2;
 
     private void DrawGlassCenter(DrawingContext context, Point center, double r1, Typeface bold, Typeface regular)
     {

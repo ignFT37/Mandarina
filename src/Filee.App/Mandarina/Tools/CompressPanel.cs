@@ -96,7 +96,7 @@ public sealed partial class CompressPanel : ToolPanel
     }
 
     /// <summary>Photos and videos have the resize card too, so their window is taller than a PDF's or an audio file's.</summary>
-    public override Size PreferredSize => new(560, CanResize ? 470 : IsLosslessAudio ? 330 : ShowLosslessSome ? 420 : 400);
+    public override Size PreferredSize => new(560, CanResize ? 482 : IsLosslessAudio ? 342 : ShowLosslessSome ? 432 : 412);
 
     // ───────── What the view shows ─────────
 

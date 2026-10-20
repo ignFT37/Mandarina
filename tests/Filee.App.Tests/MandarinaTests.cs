@@ -158,6 +158,8 @@ public class MandarinaTests
     [AvaloniaTheory]
     [InlineData("es")]
     [InlineData("en")]
+    [InlineData("ko")]
+    [InlineData("zh-CN")]
     public void The_eleven_petals_of_a_videos_wheel_fit_their_labels(string language)
     {
         TestServices.EnsureInitialized(language);
@@ -169,7 +171,8 @@ public class MandarinaTests
             var vm = AppHost.Get<RadialViewModel>();
             vm.ResetForDrag(WheelMode.Tools);
             vm.Load([video], clickMode: false);
-            Assert.Equal(MediaTools.Locate() is null ? 3 : 11, vm.Items.Count); // compress … redact, and transcribe and subtitles
+            Assert.Equal(11, vm.Items.Count); // compress … redact, and transcribe and subtitles: without FFmpeg they are greyed out, not dropped
+            Assert.Equal(MediaTools.Locate() is null, vm.Items.Any(item => !item.IsEnabled && item.Id == "trimVideo"));
             var window = new RadialWindow { DataContext = vm };
             vm.Backdrop = Wallpaper((int)Math.Ceiling(DonutMenu.SideFor(vm.OuterRadius, vm.ReserveSubRing)));
             window.Show();

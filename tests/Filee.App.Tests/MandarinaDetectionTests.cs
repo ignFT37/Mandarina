@@ -341,6 +341,10 @@ public sealed class MandarinaDetectionTests : IDisposable
 
     private static double CenterY(DetectedRegion region) => region.Y + region.Height / 2;
 
+    /// <summary>Which recognizer answered and what it boxed, for a failure message (they differ from PC to PC).</summary>
+    private static string Describe(RedactDetectionResult found) =>
+        $"recognizer {found.Language ?? "?"}, regions: " + string.Join(", ", found.Select(region => $"{region.X:0},{region.Y:0} {region.Width:0}x{region.Height:0}"));
+
     [AvaloniaTheory]
     [InlineData("fr", "segoeui.ttf", "Les élèves étudient à l'école près du château")]
     [InlineData("de", "segoeui.ttf", "Große Straße, schöne Übung für Mädchen")]
@@ -375,7 +379,7 @@ public sealed class MandarinaDetectionTests : IDisposable
             return;
         }
         Assert.NotEmpty(found);
-        Assert.True(found.Sum(region => region.Width) > 500);
+        Assert.True(found.Sum(region => region.Width) > 500, Describe(found));
     }
 
     [AvaloniaTheory]
@@ -393,7 +397,7 @@ public sealed class MandarinaDetectionTests : IDisposable
         }
         if (found.Count > 0)
         {
-            Assert.True(found.Sum(region => region.Width) > 300, "this PC has the recognizer: the line is boxed");
+            Assert.True(found.Sum(region => region.Width) > 300, "this PC has the recognizer: the line is boxed. " + Describe(found));
             return;
         }
 

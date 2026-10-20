@@ -94,6 +94,7 @@ public sealed class MandarinaCompressTests : IDisposable
         foreach (var picture in pictures)
         {
             var page = document.AddPage();
+            page.Size = PdfSharp.PageSize.A4; // PDFsharp's default page follows the PC's region (Letter on a US runner): the widths below are A4's
             using var graphics = XGraphics.FromPdfPage(page);
             using var image = XImage.FromFile(picture);
             var width = page.Width.Point;

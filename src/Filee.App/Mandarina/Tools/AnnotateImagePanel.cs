@@ -40,7 +40,7 @@ public sealed partial class AnnotateImagePanel : ToolPanel
         _ = LoadAsync();
     }
 
-    public override Size PreferredSize => new(960, 700);
+    public override Size PreferredSize => new(960, 712);
 
     /// <summary>The marks and their history.</summary>
     public AnnotationDocument Document { get; } = new();

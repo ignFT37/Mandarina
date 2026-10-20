@@ -237,6 +237,7 @@ public sealed class MandarinaErrorTests : IDisposable
     [AvaloniaFact]
     public async Task A_file_that_does_not_load_shows_the_cause_in_the_users_language_and_logs_the_original()
     {
+        Media(); // the panel reads the file with FFmpeg: without it the panel says "needs FFmpeg" instead of what is wrong with the file
         var log = new CaptureLog();
         var panel = new TrimAudioPanel(Logged("es", log, Junk("roto.mp3")));
         await WaitAsync(() => !panel.IsLoading);
