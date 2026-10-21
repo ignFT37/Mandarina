@@ -152,15 +152,19 @@ public class OfficeEngineTests(EngineFixture fx) : IClassFixture<EngineFixture>,
     public void Office_only_converts_the_files_that_are_its_own_documents()
     {
         var planner = Planner(Fake(OfficeLicense.Licensed, true, Everything));
+        var others = Planner(Fake(OfficeLicense.Licensed, true));
 
         // Whatever else is installed (rhwp may be missing), a file that is not a Word, Excel or PowerPoint document never
-        // goes through them: no spreadsheet turned into DOCX for Word, no Word document sent through slides to a PDF.
+        // goes through them: no spreadsheet turned into DOCX for Word, no Word document sent through slides to a PDF. (Word does
+        // open an ODT, so on a PC with no other way from it to a format, e.g. no Pandoc, Office is the only route and may be it.)
         foreach (var (from, to) in new[]
                  {
                      ("xlsx", "docx"), ("md", "pdf"), ("txt", "pdf"), ("html", "pdf"), ("epub", "pdf"), ("hwpx", "pdf"),
                      ("csv", "pdf"), ("odt", "md"), ("md", "docx"), ("jpg", "pdf"),
                  })
         {
+            if (others.Plan(from, to) is null)
+                continue;
             var route = planner.Plan(from, to);
             Assert.False(route is not null && route.Steps.Any(s => s.Converter.Id == "office"), $"{from} → {to}: {Steps(route)}");
         }
