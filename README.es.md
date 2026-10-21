@@ -63,7 +63,11 @@ Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión:
 Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
 ```
 
-**Descargas sin firmar.** Los archivos todavía no llevan firma de código (ver la [Code signing policy](#code-signing-policy-política-de-firma-de-código)), así que Windows desconfía:
+Mandarina usa [SignPath Foundation](https://signpath.org) para firmar sus versiones de Windows: la firma está solicitada y todavía
+no aprobada (ver la [Code signing policy](#code-signing-policy-política-de-firma-de-código) y su apartado de
+[privacidad](#privacidad)).
+
+**Descargas sin firmar.** Los archivos todavía no llevan firma de código, así que Windows desconfía:
 - *SmartScreen* («Windows protegió su PC») sale con lo descargado de internet: pulsa **Más información → Ejecutar de todas
   formas**. Con el zip, haz clic derecho → Propiedades → **Desbloquear** antes de extraer; si no, el aviso se repite en cada
   `.exe` y `.dll`.
@@ -120,14 +124,19 @@ La firma de código gratuita de las versiones para Windows está solicitada a [S
   terceros que viaja en la descarga (7-Zip, rhwp, bibliotecas de .NET) no lo firma este proyecto.
 - **Roles:** autor, revisor y aprobador son Ignacio Insua ([@ignFT37](https://github.com/ignFT37)), que también aprueba cada
   solicitud de firma.
-- **Privacidad:** «This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it»
-  (este programa no enviará información a otros sistemas en red salvo que lo pida el usuario o quien lo instala o maneja).
-  Mandarina solo se conecta para descargar los motores y modelos que elijas instalar (FFmpeg, Pandoc, modelos de Whisper…), desde
-  las direcciones fijadas con SHA-256 en [`engines.json`](src/Filee.Engines/Infrastructure/engines.json). Sin telemetría y sin
-  comprobar actualizaciones.
 - **Cambios en el sistema:** el instalador pregunta, con las dos casillas marcadas por defecto, si Mandarina arranca con Windows y si
   añade «Convertir con Mandarina» al menú contextual y a «Enviar a». Los dos se cambian después en Ajustes → General, y el
   desinstalador quita todo lo que añadió.
+
+### Privacidad
+
+«This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it»
+(este programa no enviará información a otros sistemas en red salvo que lo pida el usuario o quien lo instala o maneja).
+
+Mandarina solo se conecta para descargar los motores y modelos que elijas instalar (FFmpeg, Pandoc, modelos de Whisper…), desde las
+direcciones fijadas con SHA-256 en [`engines.json`](src/Filee.Engines/Infrastructure/engines.json). No envía telemetría, no comprueba
+actualizaciones y no sube ninguno de tus archivos: las conversiones, la transcripción y la detección de texto y caras se hacen en tu
+PC. Los motores que descarga son programas aparte que se ejecutan en local; tampoco se les pide que envíen nada.
 
 ## Licencia y créditos
 

@@ -123,7 +123,8 @@ jobs:
           Ignacio Insua ([@ignFT37](https://github.com/ignFT37)). Privacy: This program will not transfer any information to other
           networked systems unless specifically requested by the user or the person installing or operating it. Mandarina only
           connects to download the engines and models you choose, from the addresses pinned with SHA-256 in `engines.json`.
-          Full text: [Code signing policy](https://github.com/ignFT37/Mandarina#code-signing-policy).
+          Full text: [Code signing policy](https://github.com/ignFT37/Mandarina#code-signing-policy) and
+          [Privacy](https://github.com/ignFT37/Mandarina#privacy).
           '@
           # A draft: only you see it until you press "Publish release" on GitHub, after checking the files.
           $flags = @('--draft', '--generate-notes', '--notes', $notes, '--verify-tag')
