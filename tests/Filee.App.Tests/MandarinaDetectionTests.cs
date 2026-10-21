@@ -397,6 +397,13 @@ public sealed class MandarinaDetectionTests : IDisposable
         }
         if (found.Count > 0)
         {
+            if (found.Language?.StartsWith(language, StringComparison.OrdinalIgnoreCase) != true)
+            {
+                // A Latin recognizer (a hosted runner has only en-US) boxes a few look-alike glyphs of this script: that says nothing
+                // about a PC that does have the recognizer, nor about the panel's hint, which is for a PC where nothing is found.
+                Assert.Skip($"Windows read it with its {found.Language} recognizer, not a {language} one: " + Describe(found));
+                return;
+            }
             Assert.True(found.Sum(region => region.Width) > 300, "this PC has the recognizer: the line is boxed. " + Describe(found));
             return;
         }
