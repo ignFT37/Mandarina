@@ -1397,7 +1397,7 @@ public sealed class MandarinaAudioTests : IDisposable
     [AvaloniaFact]
     public async Task Visualize_can_be_cancelled_and_leaves_nothing_behind()
     {
-        var file = await MakeAsync("larga.mp3", $"{Speech}|{Speech}", 120);
+        var file = await MakeAsync("larga.mp3", $"{Speech}|{Speech}", 900); // long enough that a fast PC (a hosted runner) is still encoding when it is cancelled
         if (file is null)
         {
             Assert.Skip(NoFfmpeg);

@@ -42,7 +42,7 @@ public sealed partial class SubtitlesPanel : TranscribePanelBase
         _ = ProbeAsync();
     }
 
-    public override Size PreferredSize => new(600, 520);
+    public override Size PreferredSize => new(600, 556);
 
     public ReadOnlyCollection<WhisperLanguage> Languages { get; }
 
