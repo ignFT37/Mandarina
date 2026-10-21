@@ -63,7 +63,11 @@ Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión:
 Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
 ```
 
-**Descargas sin firmar.** Los archivos no llevan firma de código (todavía no hay certificado), así que Windows desconfía:
+Mandarina usa [SignPath Foundation](https://signpath.org) para firmar sus versiones de Windows: la firma está solicitada y todavía
+no aprobada (ver la [Code signing policy](#code-signing-policy-política-de-firma-de-código) y su apartado de
+[privacidad](#privacidad)).
+
+**Descargas sin firmar.** Los archivos todavía no llevan firma de código, así que Windows desconfía:
 - *SmartScreen* («Windows protegió su PC») sale con lo descargado de internet: pulsa **Más información → Ejecutar de todas
   formas**. Con el zip, haz clic derecho → Propiedades → **Desbloquear** antes de extraer; si no, el aviso se repite en cada
   `.exe` y `.dll`.
@@ -109,6 +113,27 @@ dotnet test            # unos 13 minutos; los tests que necesitan ventanas reale
 Empieza por [CLAUDE.md](CLAUDE.md) y [CONTRIBUTING.md](CONTRIBUTING.md). Documentación: la de [Mandarina](docs/mandarina/) (el contrato de
 los paneles, el motor de Office, la especificación) y la de Filee: [arquitectura](docs/ARCHITECTURE.md),
 [motores](docs/ENGINES.md) y [cómo añadir un conversor](docs/ADDING-A-CONVERTER.md) (en inglés).
+
+## Code signing policy (política de firma de código)
+
+La firma de código gratuita de las versiones para Windows está solicitada a [SignPath Foundation](https://signpath.org); todavía no está aprobada, así que las descargas actuales no llevan firma.
+<!-- Cuando SignPath la apruebe, sustituye la línea de arriba por: Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) -->
+
+- **Qué se firma:** solo el instalador y los programas y bibliotecas que el [flujo de publicación](.github/workflows/release.yml) de
+  este repositorio compila desde su código (`Mandarina.exe`, la línea de comandos `mandarina` y las DLL propias de Mandarina). Lo de
+  terceros que viaja en la descarga (7-Zip, rhwp, bibliotecas de .NET) no lo firma este proyecto.
+- **Roles:** autor, revisor y aprobador son Ignacio Insua ([@ignFT37](https://github.com/ignFT37)), que también aprueba cada
+  solicitud de firma.
+
+### Privacidad
+
+«This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it»
+(este programa no enviará información a otros sistemas en red salvo que lo pida el usuario o quien lo instala o maneja).
+
+Mandarina solo se conecta para descargar los motores y modelos que elijas instalar (FFmpeg, Pandoc, modelos de Whisper…), desde las
+direcciones fijadas con SHA-256 en [`engines.json`](src/Filee.Engines/Infrastructure/engines.json). No envía telemetría, no comprueba
+actualizaciones y no sube ninguno de tus archivos: las conversiones, la transcripción y la detección de texto y caras se hacen en tu
+PC. Los motores que descarga son programas aparte que se ejecutan en local; tampoco se les pide que envíen nada.
 
 ## Licencia y créditos
 

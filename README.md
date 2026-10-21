@@ -64,7 +64,10 @@ Check the download against `SHA256SUMS.txt` from the same release:
 Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
 ```
 
-**Unsigned downloads.** The files are not code-signed (no certificate yet), so Windows is wary of them:
+Mandarina uses [SignPath Foundation](https://signpath.org) to sign its Windows releases: signing has been requested and is not
+approved yet (see the [Code signing policy](#code-signing-policy) and its [Privacy](#privacy) section).
+
+**Unsigned downloads.** The files are not code-signed yet, so Windows is wary of them:
 - *SmartScreen* ("Windows protected your PC") appears on files downloaded from the web: click **More info → Run anyway**. For the
   zip, right-click it → Properties → **Unblock** before extracting, or the warning is repeated for every `.exe` and `.dll`.
 - *Smart App Control* (Windows 11, on a clean install) can block unsigned programs and DLLs without an "run anyway" button. If it
@@ -109,6 +112,26 @@ dotnet test            # about 13 minutes; the tests that need real windows, Off
 Start with [CLAUDE.md](CLAUDE.md) and [CONTRIBUTING.md](CONTRIBUTING.md). Docs: [Mandarina's](docs/mandarina/) (the tool panels'
 contract, the Office engine, the specification) and Filee's [architecture](docs/ARCHITECTURE.md),
 [engines](docs/ENGINES.md) and [how to add a converter](docs/ADDING-A-CONVERTER.md).
+
+## Code signing policy
+
+Free code signing for the Windows releases has been requested from [SignPath Foundation](https://signpath.org); it is not approved yet, so the current downloads are unsigned.
+<!-- When SignPath approves it, replace the line above with: Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) -->
+
+- **What is signed:** only the installer and the programs and libraries that the [release workflow](.github/workflows/release.yml)
+  of this repository builds from its source (`Mandarina.exe`, the `mandarina` command line and Mandarina's own DLLs). Third-party
+  files that travel in the download (7-Zip, rhwp, .NET runtime libraries) are not signed by this project.
+- **Roles:** authors, reviewers and approvers are all Ignacio Insua ([@ignFT37](https://github.com/ignFT37)), who also approves
+  every signing request.
+
+### Privacy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+Mandarina connects to the network only to download the engines and models you choose to install (FFmpeg, Pandoc, Whisper models…),
+from the addresses pinned with SHA-256 in [`engines.json`](src/Filee.Engines/Infrastructure/engines.json). It sends no telemetry,
+checks for no updates and uploads none of your files: conversions, transcription and text and face detection run on your PC.
+The engines it downloads are separate programs that run locally; they are not asked to send anything either.
 
 ## License and credits
 

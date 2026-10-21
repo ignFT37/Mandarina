@@ -113,6 +113,15 @@ jobs:
           Unsigned binaries: Windows SmartScreen and Smart App Control may warn about or block them. Verify the download against
           `SHA256SUMS.txt`, and see "Unsigned downloads" in the README. FFmpeg, Pandoc and the Whisper models are not included;
           Mandarina downloads the ones you choose from Settings → Engines.
+
+          **Code signing policy.** Free code signing for the Windows releases has been requested from
+          [SignPath Foundation](https://signpath.org); it is not approved yet, so these files are unsigned.
+          Only the installer and the files built by this repository's release workflow are signed. Authors, reviewers and approvers:
+          Ignacio Insua ([@ignFT37](https://github.com/ignFT37)). Privacy: This program will not transfer any information to other
+          networked systems unless specifically requested by the user or the person installing or operating it. Mandarina only
+          connects to download the engines and models you choose, from the addresses pinned with SHA-256 in `engines.json`.
+          Full text: [Code signing policy](https://github.com/ignFT37/Mandarina#code-signing-policy) and
+          [Privacy](https://github.com/ignFT37/Mandarina#privacy).
           '@
           # A draft: only you see it until you press "Publish release" on GitHub, after checking the files.
           $flags = @('--draft', '--generate-notes', '--notes', $notes, '--verify-tag')
