@@ -61,7 +61,7 @@ leave the box ticked, the `mandarina` command to your PATH.
 Check the download against `SHA256SUMS.txt` from the same release (read the note on unsigned downloads below first):
 
 ```powershell
-Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Mandarina-0.1.1-win-x64-setup.exe -Algorithm SHA256
 ```
 
 > **The downloads are not code-signed.** There is no certificate yet: the free one from [SignPath Foundation](https://signpath.org)

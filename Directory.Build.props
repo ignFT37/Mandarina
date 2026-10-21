@@ -15,7 +15,7 @@
     <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
 
     <!-- Mandarina's own version (Filee 1.12.0 is the base); releases pass -p:Version=<tag without the v>. -->
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Product>Mandarina</Product>
     <!-- Becomes the file description in the version resource, which is what Task Manager and SmartScreen show (not "Filee"). -->
     <AssemblyTitle>Mandarina</AssemblyTitle>

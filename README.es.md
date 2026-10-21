@@ -60,7 +60,7 @@ Inicio y, si dejas la casilla marcada, añade el comando `mandarina` al PATH.
 Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión (lee antes el aviso de descargas sin firmar de más abajo):
 
 ```powershell
-Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Mandarina-0.1.1-win-x64-setup.exe -Algorithm SHA256
 ```
 
 > **Las descargas no están firmadas.** Todavía no hay certificado: el gratuito de [SignPath Foundation](https://signpath.org) se ha
