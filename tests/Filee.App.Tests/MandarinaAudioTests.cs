@@ -1397,7 +1397,7 @@ public sealed class MandarinaAudioTests : IDisposable
     [AvaloniaFact]
     public async Task Visualize_can_be_cancelled_and_leaves_nothing_behind()
     {
-        var file = await MakeAsync("larga.mp3", $"{Speech}|{Speech}", 900); // long enough that a fast PC (a hosted runner) is still encoding when it is cancelled
+        var file = await MakeAsync("larga.wav", Speech, 3600, 8000); // an hour of mono at 8 kHz: a fast PC (a hosted runner) is still encoding when it is cancelled
         if (file is null)
         {
             Assert.Skip(NoFfmpeg);
@@ -1406,7 +1406,8 @@ public sealed class MandarinaAudioTests : IDisposable
         var panel = new AudioToVideoPanel(Context(file));
         await WaitAsync(() => !panel.IsLoading);
         var run = panel.RunAsync();
-        await WaitAsync(() => panel.Progress > 0, 90000);                          // FFmpeg is on its way
+        await WaitAsync(() => Directory.GetFiles(_root, "*.mp4").Length > 0 || panel.IsDone, 90000); // FFmpeg is on its way: it has opened its output
+        Assert.False(panel.IsDone, "it finished before it could be cancelled");
         panel.Cancel();
         await run;
 
