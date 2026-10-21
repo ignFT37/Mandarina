@@ -57,24 +57,25 @@ Descarga **`Mandarina-<versión>-win-x64-setup.exe`** (instalador, solo para ti,
 [última versión](https://github.com/ignFT37/Mandarina/releases). Windows 10/11 de 64 bits; no hace falta instalar nada más. El instalador crea el acceso directo en
 Inicio y, si dejas la casilla marcada, añade el comando `mandarina` al PATH.
 
-Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión:
+Comprueba la descarga con `SHA256SUMS.txt`, de la misma versión (lee antes el aviso de descargas sin firmar de más abajo):
 
 ```powershell
 Get-FileHash .\Mandarina-0.1.0-win-x64-setup.exe -Algorithm SHA256
 ```
 
-Mandarina usa [SignPath Foundation](https://signpath.org) para firmar sus versiones de Windows: la firma está solicitada y todavía
-no aprobada (ver la [Code signing policy](#code-signing-policy-política-de-firma-de-código) y su apartado de
-[privacidad](#privacidad)).
-
-**Descargas sin firmar.** Los archivos todavía no llevan firma de código, así que Windows desconfía:
-- *SmartScreen* («Windows protegió su PC») sale con lo descargado de internet: pulsa **Más información → Ejecutar de todas
-  formas**. Con el zip, haz clic derecho → Propiedades → **Desbloquear** antes de extraer; si no, el aviso se repite en cada
-  `.exe` y `.dll`.
-- *Smart App Control* (Windows 11 recién instalado) puede bloquear programas y DLL sin firmar, sin botón de «ejecutar de todas
-  formas». Si pasa, Mandarina no arrancará en ese PC salvo que lo desactives (Seguridad de Windows → Control de aplicaciones y
-  navegador → Smart App Control); una vez apagado, Windows no deja volver a encenderlo sin reinstalarlo. Decídelo tú: si no
-  quieres, compílala desde el código (abajo).
+> **Las descargas no están firmadas.** Todavía no hay certificado: el gratuito de [SignPath Foundation](https://signpath.org) se ha
+> denegado por ahora, hasta que el proyecto sea más conocido, y Mandarina se firmará cuando se pueda (ver la
+> [Code signing policy](#code-signing-policy-política-de-firma-de-código)). Lo que verás:
+> - *SmartScreen* («Windows protegió su PC»): pulsa **Más información → Ejecutar de todas formas**. Tu navegador también puede avisar
+>   al descargar el archivo. Con el zip, haz clic derecho → Propiedades → **Desbloquear** antes de extraer; si no, el aviso se repite
+>   en cada `.exe` y `.dll`.
+> - *Smart App Control*, si está activado, no deja que Windows abra Mandarina, ni siquiera una compilada por ti desde el código. Para
+>   usarla hay que desactivar Smart App Control (Seguridad de Windows → Control de aplicaciones y navegador → Smart App Control).
+>   Esa decisión es tuya.
+>
+> **Comprueba lo que has descargado:** compara su SHA-256 (`Get-FileHash <archivo> -Algorithm SHA256`) con `SHA256SUMS.txt`, de la
+> misma versión. Las versiones las compila GitHub Actions desde el código de este repositorio. Mandarina se ofrece tal cual, bajo la
+> licencia MIT, sin garantía.
 
 FFmpeg, Pandoc y los modelos de Whisper no van incluidos: Mandarina descarga los que elijas en Ajustes → Motores.
 Las licencias de todo lo que lleva la descarga están en `THIRD-PARTY-NOTICES.md`.
@@ -116,10 +117,15 @@ los paneles, el motor de Office, la especificación) y la de Filee: [arquitectur
 
 ## Code signing policy (política de firma de código)
 
-La firma de código gratuita de las versiones para Windows está solicitada a [SignPath Foundation](https://signpath.org); todavía no está aprobada, así que las descargas actuales no llevan firma.
-<!-- Cuando SignPath la apruebe, sustituye la línea de arriba por: Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) -->
+La firma de código gratuita de [SignPath Foundation](https://signpath.org) se solicitó para las versiones de Windows y se ha denegado
+por ahora: su programa gratuito es para proyectos que ya tienen visibilidad pública (estrellas, forks, colaboradores, artículos o
+actividad sostenida). Se puede volver a pedir cuando Mandarina sea más conocida; por ahora no se prevé una firma de pago. **Hasta
+entonces las descargas van sin firmar** (ver [Instalar](#instalar)).
+<!-- Si SignPath la aprueba más adelante, sustituye el párrafo de arriba por: Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) -->
 
-- **Qué se firma:** solo el instalador y los programas y bibliotecas que el [flujo de publicación](.github/workflows/release.yml) de
+Lo que cubrirá esta política cuando haya firma:
+
+- **Qué se firmará:** solo el instalador y los programas y bibliotecas que el [flujo de publicación](.github/workflows/release.yml) de
   este repositorio compila desde su código (`Mandarina.exe`, la línea de comandos `mandarina` y las DLL propias de Mandarina). Lo de
   terceros que viaja en la descarga (7-Zip, rhwp, bibliotecas de .NET) no lo firma este proyecto.
 - **Roles:** autor, revisor y aprobador son Ignacio Insua ([@ignFT37](https://github.com/ignFT37)), que también aprueba cada
